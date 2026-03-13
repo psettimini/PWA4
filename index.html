@@ -1036,7 +1036,7 @@ async function syncPendingQueue(showFeedback = false) {
       if (item.action === 'add') {
         const r = item.payload.data;
         const { error } = await sb.from('gastos').insert({
-          fecha: r.Fecha, centro: r.Centro, tipo: r.Tipo,
+          user_id: currentUserId, fecha: r.Fecha, centro: r.Centro, tipo: r.Tipo,
           concepto: r.Concepto, metodo: r.Metodo, importe: r.Importe
         });
         if (error) throw error;
@@ -1115,7 +1115,7 @@ async function guardarGasto() {
       if (error) throw error;
     } else {
       const { error } = await sb.from('gastos').insert({
-        fecha: record.Fecha, centro: record.Centro, tipo: record.Tipo,
+        user_id: currentUserId, fecha: record.Fecha, centro: record.Centro, tipo: record.Tipo,
         concepto: record.Concepto, metodo: record.Metodo, importe: record.Importe
       });
       if (error) throw error;
@@ -1348,7 +1348,7 @@ async function guardarFijoRapido(concepto, centro, tipo, metodo, importe, btn) {
   btn.disabled = true;
   try {
     const { error } = await sb.from('gastos').insert({
-      fecha, centro, tipo, concepto, metodo, importe
+      user_id: currentUserId, fecha, centro, tipo, concepto, metodo, importe
     });
     if (error) throw error;
     btn.innerHTML = '<i class="fas fa-check"></i>';
@@ -1651,7 +1651,7 @@ async function abmAdd(field) {
   const table = field === 'Centro' ? 'centros' : 'metodos_pago';
   showLoading(true);
   try {
-    const { error } = await sb.from(table).insert({ nombre: name });
+    const { error } = await sb.from(table).insert({ user_id: currentUserId, nombre: name });
     if (error) throw error;
     input.value = '';
     // Recargar catálogos
