@@ -525,7 +525,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);-webk
 ======================================== */
 const SUPABASE_URL = 'https://vljwkvtivthwwerqxisc.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsandrdnRpdnRod3dlcnF4aXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MzIzNDMsImV4cCI6MjA4OTAwODM0M30.ETQt8mP2qeqWOUWSgqQc4t1DGP908ufTP-vZhaXHKy4';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ========================================
    ESTADO GLOBAL
@@ -687,7 +687,7 @@ async function doLogin() {
   const btn = $('btn-login');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>Ingresando...';
   try {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
     // onAuthStateChange se encarga del resto
   } catch (e) {
@@ -710,7 +710,7 @@ async function doRegister() {
   const btn = $('btn-register');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>Creando cuenta...';
   try {
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await sb.auth.signUp({ email, password });
     if (error) throw error;
     showAuthSuccess('¡Cuenta creada! Revisá tu email para confirmar.');
     showAuthMode('login');
@@ -728,7 +728,7 @@ async function doResetPassword() {
   const email = $('auth-reset-email').value.trim();
   if (!email) { showAuthError('Ingresá tu email'); return; }
   try {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await sb.auth.resetPasswordForEmail(email);
     if (error) throw error;
     showAuthSuccess('¡Listo! Revisá tu email para restablecer tu contraseña.');
   } catch (e) {
@@ -739,7 +739,7 @@ async function doResetPassword() {
 async function doLogout() {
   const ok = await modalConfirm('¿Cerrar sesión?');
   if (!ok) return;
-  await supabase.auth.signOut();
+  await sb.auth.signOut();
   allData = [];
   dbCentros = [];
   dbMetodos = [];
@@ -933,7 +933,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('offline', () => { updateNetworkStatus('Sin conexión', 'warn'); });
 
   // Auth listener
-  supabase.auth.onAuthStateChange(async (event, session) => {
+  sb.auth.onAuthStateChange(async (event, session) => {
     if (session) {
       currentUserId = session.user.id;
       hideAuth();
@@ -1013,14 +1013,14 @@ async function cargarDatos() {
 
 async function loadCentrosFromDB() {
   try {
-    const { data } = await supabase.from('centros').select('nombre').order('nombre');
+    const { data } = await sb.from('centros').select('nombre').order('nombre');
     dbCentros = data?.map(c => c.nombre) || [];
   } catch { /* keep previous */ }
 }
 
 async function loadMetodosFromDB() {
   try {
-    const { data } = await supabase.from('metodos_pago').select('nombre').order('nombre');
+    const { data } = await sb.from('metodos_pago').select('nombre').order('nombre');
     dbMetodos = data?.map(m => m.nombre) || [];
   } catch { /* keep previous */ }
 }
@@ -1035,20 +1035,20 @@ async function syncPendingQueue(showFeedback = false) {
     try {
       if (item.action === 'add') {
         const r = item.payload.data;
-        const { error } = await supabase.from('gastos').insert({
+        const { error } = await sb.from('gastos').insert({
           fecha: r.Fecha, centro: r.Centro, tipo: r.Tipo,
           concepto: r.Concepto, metodo: r.Metodo, importe: r.Importe
         });
         if (error) throw error;
       } else if (item.action === 'update') {
         const r = item.payload.record;
-        const { error } = await supabase.from('gastos').update({
+        const { error } = await sb.from('gastos').update({
           fecha: r.Fecha, centro: r.Centro, tipo: r.Tipo,
           concepto: r.Concepto, metodo: r.Metodo, importe: r.Importe
         }).eq('id', item.payload.id);
         if (error) throw error;
       } else if (item.action === 'delete') {
-        const { error } = await supabase.from('gastos').delete().eq('id', item.payload.id);
+        const { error } = await sb.from('gastos').delete().eq('id', item.payload.id);
         if (error) throw error;
       }
     } catch {
@@ -1108,13 +1108,13 @@ async function guardarGasto() {
   try {
     if (!navigator.onLine) throw new Error('offline');
     if (editingId) {
-      const { error } = await supabase.from('gastos').update({
+      const { error } = await sb.from('gastos').update({
         fecha: record.Fecha, centro: record.Centro, tipo: record.Tipo,
         concepto: record.Concepto, metodo: record.Metodo, importe: record.Importe
       }).eq('id', editingId);
       if (error) throw error;
     } else {
-      const { error } = await supabase.from('gastos').insert({
+      const { error } = await sb.from('gastos').insert({
         fecha: record.Fecha, centro: record.Centro, tipo: record.Tipo,
         concepto: record.Concepto, metodo: record.Metodo, importe: record.Importe
       });
@@ -1175,7 +1175,7 @@ async function borrarGasto(id, concepto) {
   if (!ok) return;
   showLoading(true);
   try {
-    const { error } = await supabase.from('gastos').delete().eq('id', id);
+    const { error } = await sb.from('gastos').delete().eq('id', id);
     if (error) throw error;
     await cargarDatos();
     toast('Borrado');
@@ -1347,7 +1347,7 @@ async function guardarFijoRapido(concepto, centro, tipo, metodo, importe, btn) {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
   btn.disabled = true;
   try {
-    const { error } = await supabase.from('gastos').insert({
+    const { error } = await sb.from('gastos').insert({
       fecha, centro, tipo, concepto, metodo, importe
     });
     if (error) throw error;
@@ -1651,7 +1651,7 @@ async function abmAdd(field) {
   const table = field === 'Centro' ? 'centros' : 'metodos_pago';
   showLoading(true);
   try {
-    const { error } = await supabase.from(table).insert({ nombre: name });
+    const { error } = await sb.from(table).insert({ nombre: name });
     if (error) throw error;
     input.value = '';
     // Recargar catálogos
@@ -1670,7 +1670,7 @@ async function abmRemoveCustom(field, value) {
   const table = field === 'Centro' ? 'centros' : 'metodos_pago';
   showLoading(true);
   try {
-    const { error } = await supabase.from(table).delete().eq('nombre', value);
+    const { error } = await sb.from(table).delete().eq('nombre', value);
     if (error) throw error;
     if (field === 'Centro') { await loadCentrosFromDB(); }
     else { await loadMetodosFromDB(); }
@@ -1698,7 +1698,7 @@ async function abmRename(field, oldValue) {
     if (count > 0) {
       // Bulk rename en gastos
       const p_field = field === 'Centro' ? 'centro' : 'metodo';
-      const { data, error } = await supabase.rpc('bulk_rename', {
+      const { data, error } = await sb.rpc('bulk_rename', {
         p_field, p_old_value: oldValue, p_new_value: newValue.trim()
       });
       if (error) throw error;
@@ -1707,7 +1707,7 @@ async function abmRename(field, oldValue) {
     }
     // Renombrar en catálogo
     const table = field === 'Centro' ? 'centros' : 'metodos_pago';
-    await supabase.from(table).update({ nombre: newValue.trim() }).eq('nombre', oldValue);
+    await sb.from(table).update({ nombre: newValue.trim() }).eq('nombre', oldValue);
     // Recargar
     if (field === 'Centro') { await loadCentrosFromDB(); }
     else { await loadMetodosFromDB(); }
@@ -1736,7 +1736,7 @@ async function abmMerge(field, sourceValue) {
   showLoading(true);
   try {
     const p_field = field === 'Centro' ? 'centro' : 'metodo';
-    const { data, error } = await supabase.rpc('bulk_rename', {
+    const { data, error } = await sb.rpc('bulk_rename', {
       p_field, p_old_value: sourceValue, p_new_value: targetValue.trim()
     });
     if (error) throw error;
@@ -1744,7 +1744,7 @@ async function abmMerge(field, sourceValue) {
     toast(`${data?.count || count} registros fusionados`);
     // Eliminar del catálogo
     const table = field === 'Centro' ? 'centros' : 'metodos_pago';
-    await supabase.from(table).delete().eq('nombre', sourceValue);
+    await sb.from(table).delete().eq('nombre', sourceValue);
     // Recargar
     if (field === 'Centro') { await loadCentrosFromDB(); }
     else { await loadMetodosFromDB(); }
@@ -1812,7 +1812,7 @@ function initSwipeCards() {
 async function borrarGasto_direct(id) {
   showLoading(true);
   try {
-    const { error } = await supabase.from('gastos').delete().eq('id', id);
+    const { error } = await sb.from('gastos').delete().eq('id', id);
     if (error) throw error;
     await cargarDatos();
     toast('Borrado');
