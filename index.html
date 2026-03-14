@@ -958,7 +958,7 @@ async function cargarDatos() {
   showLoading(true);
   try {
     // Cargar gastos
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from('gastos')
       .select('*')
       .order('fecha', { ascending: false });
