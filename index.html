@@ -549,6 +549,10 @@ const STORAGE_KEYS = {
 const $ = id => document.getElementById(id);
 const safeNumber = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
 const formatearNumero = n => parseInt(n || 0, 10).toLocaleString('es-AR');
+/* Fecha local (evita que UTC cambie el día en Argentina UTC-3) */
+function localDateStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function localMesStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function setFechaHoy() { if ($('fecha')) $('fecha').value = localDateStr(); }
 /* PERF: debounce genérico para inputs de búsqueda */
 function debounce(fn, ms = 150) { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); }; }
 /* ── SEGURIDAD: escape HTML para prevenir XSS ── */
@@ -924,7 +928,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateCacheLabel();
   updatePendingBadge();
   updateNetworkStatus(navigator.onLine ? 'En línea' : 'Sin conexión', navigator.onLine ? 'ok' : 'warn');
-  if ($('fecha')) $('fecha').valueAsDate = new Date();
+  setFechaHoy();
   const appVersionEl = $('app-version');
   if (appVersionEl) appVersionEl.textContent = `Versión ${APP_VERSION}`;
   showTab(currentTab);
@@ -1083,7 +1087,7 @@ async function guardarGasto() {
   if (!record.Fecha || !record.Centro || !record.Concepto || record.Importe <= 0) { toastWarn('Completá los campos'); return; }
 
   if (!editingId) {
-    const mesActual = record.Fecha ? record.Fecha.slice(0,7) : new Date().toISOString().slice(0,7);
+    const mesActual = record.Fecha ? record.Fecha.slice(0,7) : localMesStr();
     const conceptoLow = record.Concepto.toLowerCase();
     const centroLow = record.Centro.toLowerCase();
     const repetibles = ['transferencia','transfer','envío','envio','retiro','carga'];
@@ -1165,7 +1169,7 @@ function limpiarFormulario() {
 
 function cancelarEdicion() {
   limpiarFormulario();
-  $('fecha').valueAsDate = new Date();
+  setFechaHoy();
   $('centro').value = '';
   $('tipo').value = 'F';
   $('metodo').value = dbMetodos.length ? dbMetodos[0] : 'Efectivo';
@@ -1269,9 +1273,9 @@ const mostrarSugerenciasDebounced = debounce(mostrarSugerencias, 120);
    FIJOS PENDIENTES + RESUMEN
 ======================================== */
 function actualizarSugerencias() {
-  const hoy = new Date(), mesActual = hoy.toISOString().slice(0,7);
-  const prev1 = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1), mesAnterior = prev1.toISOString().slice(0,7);
-  const prev2 = new Date(hoy.getFullYear(), hoy.getMonth()-2, 1), mes2Atras = prev2.toISOString().slice(0,7);
+  const hoy = new Date(), mesActual = localMesStr();
+  const prev1 = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1), mesAnterior = `${prev1.getFullYear()}-${String(prev1.getMonth()+1).padStart(2,'0')}`;
+  const prev2 = new Date(hoy.getFullYear(), hoy.getMonth()-2, 1), mes2Atras = `${prev2.getFullYear()}-${String(prev2.getMonth()+1).padStart(2,'0')}`;
   const label = formatMesLabel(mesAnterior);
   const ANUAL = 'pagado por el año';
 
@@ -1344,7 +1348,7 @@ function actualizarSugerencias() {
 function seleccionarFijo(c,ce,t,m,i) { $('concepto').value=c; $('centro').value=ce; $('tipo').value=t; $('metodo').value=m; $('importe').value=i; $('suggestions').classList.add('hidden'); $('avg-suggestion').classList.add('hidden'); $('importe').focus(); }
 
 async function guardarFijoRapido(concepto, centro, tipo, metodo, importe, btn) {
-  const fecha = new Date().toISOString().slice(0,10);
+  const fecha = localDateStr();
   const originalHtml = btn.innerHTML;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
   btn.disabled = true;
@@ -1366,7 +1370,7 @@ async function guardarFijoRapido(concepto, centro, tipo, metodo, importe, btn) {
 }
 
 function actualizarResumen() {
-  const mes = new Date().toISOString().slice(0,7); let total=0, cant=0;
+  const mes = localMesStr(); let total=0, cant=0;
   for (const g of allData) { if (g.Fecha&&g.Fecha.startsWith(mes)) { total+=safeNumber(g.Importe); cant++; } }
   $('resumen-total').textContent = '$'+formatearNumero(total);
   $('resumen-cantidad').textContent = cant;
@@ -1502,9 +1506,9 @@ function initComparar() {
   const p1=s1.value,p2=s2.value; s1.innerHTML=opts; s2.innerHTML=opts;
 
   const hoy = new Date();
-  const mesActual = hoy.toISOString().slice(0,7);
+  const mesActual = localMesStr();
   const prev = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1);
-  const mesAnterior = prev.toISOString().slice(0,7);
+  const mesAnterior = `${prev.getFullYear()}-${String(prev.getMonth()+1).padStart(2,'0')}`;
 
   if (p1 && ms.includes(p1)) s1.value = p1;
   else if (ms.includes(mesAnterior)) s1.value = mesAnterior;
