@@ -933,14 +933,15 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('offline', () => { updateNetworkStatus('Sin conexión', 'warn'); });
 
   // Auth listener
-  sb.auth.onAuthStateChange(async (event, session) => {
+  sb.auth.onAuthStateChange((event, session) => {
     console.log('[Auth]', event, session ? session.user.email : 'no session');
     if (session) {
       currentUserId = session.user.id;
       hideAuth();
       if ($('config-user-email')) $('config-user-email').textContent = session.user.email || '';
       if (allData.length === 0) {
-        await cargarDatos();
+        // Pequeño delay para que el lock de auth se libere antes de hacer queries
+        setTimeout(() => cargarDatos(), 100);
       }
     } else {
       currentUserId = null;
@@ -956,10 +957,6 @@ async function cargarDatos() {
   if (!currentUserId) return;
   showLoading(true);
   try {
-    // Asegurar que la sesión esté activa antes de hacer queries
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) { console.warn('[cargarDatos] No active session'); showLoading(false); return; }
-
     // Cargar gastos
     const { data, error } = await supabase
       .from('gastos')
