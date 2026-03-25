@@ -312,7 +312,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);-webk
           </div>
           <div>
             <label for="importe" class="block text-sm font-medium text-slate-700 mb-1">Importe ($)</label>
-            <input type="number" id="importe" required min="0.01" step="0.01" inputmode="decimal" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 text-lg font-semibold">
+            <input type="number" id="importe" required step="0.01" inputmode="decimal" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 text-lg font-semibold">
             <p id="avg-suggestion" class="text-xs text-slate-500 mt-1 hidden"></p>
           </div>
           <div id="acciones-carga" class="flex flex-col md:flex-row gap-3">
@@ -1084,7 +1084,7 @@ async function guardarGasto() {
     Metodo: $('metodo').value,
     Importe: safeNumber($('importe').value)
   };
-  if (!record.Fecha || !record.Centro || !record.Concepto || record.Importe <= 0) { toastWarn('Completá los campos'); return; }
+  if (!record.Fecha || !record.Centro || !record.Concepto || record.Importe === 0) { toastWarn('Completá los campos (importe no puede ser cero)'); return; }
 
   if (!editingId) {
     const mesActual = record.Fecha ? record.Fecha.slice(0,7) : localMesStr();
@@ -1398,7 +1398,11 @@ function renderHistorial() {
   const tbody = $('tabla-historial'), mob = $('historial-cards-mobile');
   if (!f.length) { tbody.innerHTML='<tr><td colspan="7" class="py-8 text-center text-slate-400">Sin resultados</td></tr>'; if(mob)mob.innerHTML=''; return; }
 
-  tbody.innerHTML = top.map(g=>`<tr class="hover:bg-slate-50"><td class="py-3 px-4">${escapeHtml(g.Fecha)||'-'}</td><td class="py-3 px-4 font-medium">${escapeHtml(g.Centro)}</td><td class="py-3 px-4">${escapeHtml(g.Concepto)}${g._pending?' <span class="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Pendiente</span>':''}</td><td class="py-3 px-4"><span class="px-2 py-1 rounded text-xs ${g.Tipo==='F'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'}">${escapeHtml(g.Tipo)}</span></td><td class="py-3 px-4 text-xs text-slate-500">${escapeHtml(g.Metodo)}</td><td class="py-3 px-4 text-right font-mono">$${formatearNumero(g.Importe)}</td><td class="py-3 px-4 text-center"><button onclick="editarGasto('${escapeAttr(g.ID)}')" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button><button onclick="borrarGasto('${escapeAttr(g.ID)}','${escapeAttr(g.Concepto)}')" class="text-red-600"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+  tbody.innerHTML = top.map(g=>{
+    const isNeg = g.Importe < 0;
+    const impColor = isNeg ? 'text-red-500' : '';
+    return `<tr class="hover:bg-slate-50"><td class="py-3 px-4">${escapeHtml(g.Fecha)||'-'}</td><td class="py-3 px-4 font-medium">${escapeHtml(g.Centro)}</td><td class="py-3 px-4">${escapeHtml(g.Concepto)}${g._pending?' <span class="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Pendiente</span>':''}</td><td class="py-3 px-4"><span class="px-2 py-1 rounded text-xs ${g.Tipo==='F'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'}">${escapeHtml(g.Tipo)}</span></td><td class="py-3 px-4 text-xs text-slate-500">${escapeHtml(g.Metodo)}</td><td class="py-3 px-4 text-right font-mono ${impColor}">${isNeg?'-':''}$${formatearNumero(Math.abs(g.Importe))}</td><td class="py-3 px-4 text-center"><button onclick="editarGasto('${escapeAttr(g.ID)}')" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button><button onclick="borrarGasto('${escapeAttr(g.ID)}','${escapeAttr(g.Concepto)}')" class="text-red-600"><i class="fas fa-trash"></i></button></td></tr>`;
+  }).join('');
 
   if (mob) {
     let lastGroup = '';
@@ -1409,7 +1413,10 @@ function renderHistorial() {
         html += `<div class="flex items-center gap-2 mt-3 mb-1 first:mt-0"><span class="text-xs font-bold text-slate-500 uppercase tracking-wide">${group}</span><span class="flex-1 border-t border-slate-200"></span></div>`;
         lastGroup = group;
       }
-      html += `<div class="hist-swipe-wrapper"><div class="hist-swipe-bg"><div class="hist-swipe-bg-edit"><i class="fas fa-edit"></i> Editar</div><div class="hist-swipe-bg-delete">Borrar <i class="fas fa-trash"></i></div></div><div class="hist-card" data-id="${escapeAttr(g.ID)}" data-concepto="${escapeAttr(g.Concepto)}"><div class="hist-card-top"><div><div class="hist-card-title">${escapeHtml(g.Concepto)}${g._pending?'<span class="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pendiente</span>':''}</div><div class="hist-card-sub">${formatFechaCorta(g.Fecha)} · ${escapeHtml(g.Centro)}</div></div><div class="hist-card-amount ${g.Tipo==='F'?'text-emerald-700':'text-amber-700'}">$${formatearNumero(g.Importe)}</div></div><div class="hist-card-meta"><span class="hist-pill">${g.Tipo==='F'?'Fijo':'Variable'}</span><span class="hist-pill">${escapeHtml(g.Metodo)}</span></div></div></div>`;
+      const isNeg = g.Importe < 0;
+      const amountColor = isNeg ? 'text-red-500' : (g.Tipo==='F'?'text-emerald-700':'text-amber-700');
+      const amountDisplay = `${isNeg?'-':''}$${formatearNumero(Math.abs(g.Importe))}`;
+      html += `<div class="hist-swipe-wrapper"><div class="hist-swipe-bg"><div class="hist-swipe-bg-edit"><i class="fas fa-edit"></i> Editar</div><div class="hist-swipe-bg-delete">Borrar <i class="fas fa-trash"></i></div></div><div class="hist-card" data-id="${escapeAttr(g.ID)}" data-concepto="${escapeAttr(g.Concepto)}"><div class="hist-card-top"><div><div class="hist-card-title">${escapeHtml(g.Concepto)}${g._pending?'<span class="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pendiente</span>':''}</div><div class="hist-card-sub">${formatFechaCorta(g.Fecha)} · ${escapeHtml(g.Centro)}</div></div><div class="hist-card-amount ${amountColor}">${amountDisplay}</div></div><div class="hist-card-meta"><span class="hist-pill">${g.Tipo==='F'?'Fijo':'Variable'}</span><span class="hist-pill">${escapeHtml(g.Metodo)}</span></div></div></div>`;
     }
     mob.innerHTML = html;
     initSwipeCards();
