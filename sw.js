@@ -1,10 +1,22 @@
-const CACHE_VERSION = 'gastos-pwa-v2.0.1';
+const CACHE_VERSION = 'gastos-pwa-v2.1.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const APP_SHELL = [
   './',
   'index.html',
   'manifest.json',
+  'css/styles.css',
+  'js/config.js',
+  'js/utils.js',
+  'js/ui.js',
+  'js/auth.js',
+  'js/data.js',
+  'js/carga.js',
+  'js/historial.js',
+  'js/dashboard.js',
+  'js/comparar.js',
+  'js/abm.js',
+  'js/app.js',
   'icon-192.png',
   'icon-512.png',
   'apple-touch-icon.png'
@@ -72,10 +84,7 @@ self.addEventListener('fetch', (event) => {
 
   if (req.method !== 'GET') return;
 
-  // No cache for Supabase API calls or other cross-origin endpoints
-  if (!isSameOrigin(url)) {
-    return;
-  }
+  if (!isSameOrigin(url)) return;
 
   if (req.mode === 'navigate') {
     event.respondWith(networkFirst(req));
