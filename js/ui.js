@@ -2,8 +2,10 @@
    UI — Toast, Modal, Dark Mode, Tabs, Pull-to-Refresh
    ui.js
 ======================================== */
+import { $, S, STORAGE_KEYS, registry } from './state.js';
+import { escapeHtml } from './utils.js';
 
-function toast(msg, duration = 1800) {
+export function toast(msg, duration = 1800) {
   const t = document.createElement('div');
   t.className = 'toast'; t.textContent = msg;
   document.body.appendChild(t);
@@ -11,7 +13,7 @@ function toast(msg, duration = 1800) {
   setTimeout(() => t.remove(), duration);
 }
 
-function toastError(msg) {
+export function toastError(msg) {
   const t = document.createElement('div');
   t.className = 'toast toast-error'; t.textContent = msg;
   document.body.appendChild(t);
@@ -19,7 +21,7 @@ function toastError(msg) {
   setTimeout(() => t.remove(), 3000);
 }
 
-function toastWarn(msg) {
+export function toastWarn(msg) {
   const t = document.createElement('div');
   t.className = 'toast toast-warn'; t.textContent = msg;
   document.body.appendChild(t);
@@ -27,7 +29,7 @@ function toastWarn(msg) {
   setTimeout(() => t.remove(), 2500);
 }
 
-function modalConfirm(msg) {
+export function modalConfirm(msg) {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -41,13 +43,13 @@ function modalConfirm(msg) {
 }
 
 /* ── Dark Mode ── */
-function initDarkMode() {
+export function initDarkMode() {
   const saved = localStorage.getItem(STORAGE_KEYS.dark);
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   applyDarkMode(saved !== null ? saved === '1' : prefersDark);
 }
 
-function applyDarkMode(dark) {
+export function applyDarkMode(dark) {
   document.documentElement.classList.toggle('dark', dark);
   const dot = $('dark-toggle-dot'), toggle = $('dark-toggle');
   if (dot) dot.style.transform = dark ? 'translateX(1.5rem)' : 'translateX(0)';
@@ -64,24 +66,21 @@ function applyDarkMode(dark) {
   }
 }
 
-function toggleDarkMode() {
+export function toggleDarkMode() {
   const isDark = !document.documentElement.classList.contains('dark');
   localStorage.setItem(STORAGE_KEYS.dark, isDark ? '1' : '0');
   applyDarkMode(isDark);
-  if (!$('section-dashboard')?.classList.contains('hidden')) renderDashboard();
-  if (!$('section-comparar')?.classList.contains('hidden')) renderComparar();
+  registry.onTabChange?.(S.currentTab);
 }
 
 /* ── Tabs ── */
-function showTab(tab) {
-  /* Dirty form check: warn when leaving Carga with unsaved data */
-  if (currentTab === 'carga' && tab !== 'carga' && _formDirty) {
+export function showTab(tab) {
+  if (S.currentTab === 'carga' && tab !== 'carga' && S.formDirty) {
     const hasContent = ($('concepto')?.value || '').trim() || ($('importe')?.value || '').trim();
     if (hasContent && !confirm('Tenés cambios sin guardar en el formulario. ¿Salir igual?')) return;
   }
-  _formDirty = false;
-
-  currentTab = tab;
+  S.formDirty = false;
+  S.currentTab = tab;
   localStorage.setItem('gastos_tab', tab);
   ['carga','historial','dashboard','comparar','config'].forEach(t => {
     $('section-'+t)?.classList.add('hidden');
@@ -91,22 +90,17 @@ function showTab(tab) {
   $('section-'+tab)?.classList.remove('hidden');
   const b = $('tab-'+tab); if (b) { b.classList.add('tab-active'); b.classList.remove('text-slate-600'); }
   const bn = $('bnav-'+tab); if (bn) bn.classList.add('bnav-active');
-  if (tab==='historial') { _historialPage = 0; restoreHistoryFilters(); renderHistorial(); }
-  if (tab==='dashboard') renderDashboard();
-  if (tab==='comparar') initComparar();
-  if (tab==='config') renderABM();
+  registry.onTabChange?.(tab);
 }
 
 /* ── SW Update Banner ── */
-function showUpdateBanner() {
-  const banner = $('sw-update-banner');
-  if (!banner) return;
+export function showUpdateBanner() {
+  const banner = $('sw-update-banner'); if (!banner) return;
   banner.classList.remove('hidden');
   requestAnimationFrame(() => { banner.style.transform = 'translateY(0)'; });
 }
-function dismissUpdateBanner() {
-  const banner = $('sw-update-banner');
-  if (!banner) return;
+export function dismissUpdateBanner() {
+  const banner = $('sw-update-banner'); if (!banner) return;
   banner.style.transform = 'translateY(-100%)';
   setTimeout(() => banner.classList.add('hidden'), 300);
 }
@@ -116,8 +110,7 @@ const _ptr = { startY: 0, pulling: false, threshold: 80 };
 
 document.addEventListener('touchstart', (e) => {
   if (window.scrollY === 0 && $('auth-overlay')?.classList.contains('hidden')) {
-    _ptr.startY = e.touches[0].clientY;
-    _ptr.pulling = true;
+    _ptr.startY = e.touches[0].clientY; _ptr.pulling = true;
   }
 }, { passive: true });
 
@@ -129,8 +122,7 @@ document.addEventListener('touchmove', (e) => {
     $('pull-indicator').style.transform = `translateY(${-100 + pct * 100}%)`;
     $('pull-text').textContent = dy >= _ptr.threshold ? 'Soltar para actualizar' : 'Deslizá para actualizar';
     $('pull-arrow').style.transform = dy >= _ptr.threshold ? 'rotate(180deg)' : '';
-    $('pull-arrow').style.display = '';
-    $('pull-spin').style.display = 'none';
+    $('pull-arrow').style.display = ''; $('pull-spin').style.display = 'none';
   }
 }, { passive: true });
 
@@ -139,11 +131,10 @@ document.addEventListener('touchend', async () => {
   const indicator = $('pull-indicator');
   const dy = parseFloat(indicator.style.transform.replace(/[^0-9.-]/g, ''));
   if (dy >= -10) {
-    $('pull-arrow').style.display = 'none';
-    $('pull-spin').style.display = '';
+    $('pull-arrow').style.display = 'none'; $('pull-spin').style.display = '';
     $('pull-text').textContent = 'Actualizando...';
     indicator.style.transform = 'translateY(0)';
-    await cargarDatos();
+    await registry.cargarDatos?.();
     toast('Datos actualizados');
   }
   setTimeout(() => { indicator.style.transform = 'translateY(-100%)'; }, 300);

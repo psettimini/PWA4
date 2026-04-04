@@ -2,26 +2,26 @@
    COMPARAR — Comparación de meses
    comparar.js
 ======================================== */
+import { $, S } from './state.js';
+import { safeNumber, formatearNumero, formatMesLabel, localMesStr, getMesKey, uniqueSorted, destroyChart, escapeHtml, escapeAttr, aggregateBy } from './utils.js';
 
-function initComparar() {
-  const ms = uniqueSorted(allData.map(g=>getMesKey(g.Fecha))).reverse();
+export function initComparar() {
+  const ms = uniqueSorted(S.allData.map(g=>getMesKey(g.Fecha))).reverse();
   const s1=$('comp-mes1'), s2=$('comp-mes2');
   const opts = '<option value="">Mes...</option>'+ms.map(m=>`<option value="${m}">${formatMesLabel(m)}</option>`).join('');
   const p1=s1.value, p2=s2.value; s1.innerHTML=opts; s2.innerHTML=opts;
-
   const mesActual = localMesStr();
   const prev = new Date(new Date().getFullYear(), new Date().getMonth()-1, 1);
   const mesAnterior = `${prev.getFullYear()}-${String(prev.getMonth()+1).padStart(2,'0')}`;
-
   s1.value = (p1 && ms.includes(p1)) ? p1 : ms.includes(mesAnterior) ? mesAnterior : ms[1] || '';
   s2.value = (p2 && ms.includes(p2)) ? p2 : ms.includes(mesActual) ? mesActual : ms[0] || '';
   renderComparar();
 }
 
-function renderComparar() {
+export function renderComparar() {
   const m1=$('comp-mes1').value, m2=$('comp-mes2').value, vista=$('comp-vista').value;
   if (!m1||!m2) { limpiarComparar(); return; }
-  const d1=allData.filter(g=>g.Fecha&&g.Fecha.startsWith(m1)), d2=allData.filter(g=>g.Fecha&&g.Fecha.startsWith(m2));
+  const d1=S.allData.filter(g=>g.Fecha&&g.Fecha.startsWith(m1)), d2=S.allData.filter(g=>g.Fecha&&g.Fecha.startsWith(m2));
   const t1=d1.reduce((s,g)=>s+safeNumber(g.Importe),0), t2=d2.reduce((s,g)=>s+safeNumber(g.Importe),0), diff=t2-t1, pct=t1>0?(diff/t1*100):0;
   $('comp-total1').textContent='$'+formatearNumero(t1); $('comp-total2').textContent='$'+formatearNumero(t2);
   const de=$('comp-diff'); de.textContent=`${diff>=0?'+':'-'}$${formatearNumero(Math.abs(diff))}`; de.className='text-xl md:text-2xl font-bold '+(diff>0?'comp-up':diff<0?'comp-down':'comp-neutral');
@@ -47,7 +47,7 @@ function renderTablaComp(cats,g1,g2,t1,t2) {
 function renderBarrasComp(cats,g1,g2,m1,m2) {
   const s=cats.slice().sort((a,b)=>((g2[b]||0)+(g1[b]||0))-((g2[a]||0)+(g1[a]||0))).slice(0,10);
   destroyChart('compBarras');
-  charts.compBarras = new Chart($('chart-comp-barras'), { type:'bar', data:{ labels:s.map(c=>c.length>18?c.substring(0,18)+'…':c),
+  S.charts.compBarras = new Chart($('chart-comp-barras'), { type:'bar', data:{ labels:s.map(c=>c.length>18?c.substring(0,18)+'…':c),
     datasets:[{ label:formatMesLabel(m1), data:s.map(c=>g1[c]||0), backgroundColor:'rgba(59,130,246,.7)', borderColor:'#3b82f6', borderWidth:1 },
               { label:formatMesLabel(m2), data:s.map(c=>g2[c]||0), backgroundColor:'rgba(245,158,11,.7)', borderColor:'#f59e0b', borderWidth:1 }]},
     options:{ responsive:true, plugins:{legend:{position:'top'}}, scales:{y:{ticks:{callback:v=>'$'+(v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'k':v)}},x:{ticks:{maxRotation:45}}}}});
@@ -60,9 +60,9 @@ function renderDonutsComp(g1,g2,m1,m2) {
   const t1=e1.slice(0,6), o1=e1.slice(6).reduce((s,e)=>s+e[1],0);
   const t2=e2.slice(0,6), o2=e2.slice(6).reduce((s,e)=>s+e[1],0);
   destroyChart('compDonut1');
-  charts.compDonut1 = new Chart($('chart-comp-donut1'), { type:'doughnut', data:{ labels:t1.map(e=>e[0]).concat(o1>0?['Otros']:[]), datasets:[{data:t1.map(e=>e[1]).concat(o1>0?[o1]:[]),backgroundColor:col}]}, options:{responsive:true,plugins:{legend:{display:false}}}});
+  S.charts.compDonut1 = new Chart($('chart-comp-donut1'), { type:'doughnut', data:{ labels:t1.map(e=>e[0]).concat(o1>0?['Otros']:[]), datasets:[{data:t1.map(e=>e[1]).concat(o1>0?[o1]:[]),backgroundColor:col}]}, options:{responsive:true,plugins:{legend:{display:false}}}});
   destroyChart('compDonut2');
-  charts.compDonut2 = new Chart($('chart-comp-donut2'), { type:'doughnut', data:{ labels:t2.map(e=>e[0]).concat(o2>0?['Otros']:[]), datasets:[{data:t2.map(e=>e[1]).concat(o2>0?[o2]:[]),backgroundColor:col}]}, options:{responsive:true,plugins:{legend:{display:false}}}});
+  S.charts.compDonut2 = new Chart($('chart-comp-donut2'), { type:'doughnut', data:{ labels:t2.map(e=>e[0]).concat(o2>0?['Otros']:[]), datasets:[{data:t2.map(e=>e[1]).concat(o2>0?[o2]:[]),backgroundColor:col}]}, options:{responsive:true,plugins:{legend:{display:false}}}});
 }
 
 function renderNuevosElim(g1,g2) {

@@ -2,17 +2,21 @@
    ABM — Centros de Gasto y Métodos de Pago
    abm.js
 ======================================== */
+import { $, S, sb, registry } from './state.js';
+import { safeNumber, formatearNumero, uniqueSorted, escapeHtml, escapeAttr, showLoading } from './utils.js';
+import { toast, toastWarn, toastError, modalConfirm } from './ui.js';
+import { loadCentrosFromDB, loadMetodosFromDB } from './data.js';
 
 function getAllValuesForField(field) {
-  const fromData = uniqueSorted(allData.map(g => g[field]).filter(Boolean));
-  if (field === 'Centro') return uniqueSorted([...new Set([...fromData, ...dbCentros])]);
-  if (field === 'Metodo') return uniqueSorted([...new Set([...fromData, ...dbMetodos])]);
+  const fromData = uniqueSorted(S.allData.map(g => g[field]).filter(Boolean));
+  if (field === 'Centro') return uniqueSorted([...new Set([...fromData, ...S.dbCentros])]);
+  if (field === 'Metodo') return uniqueSorted([...new Set([...fromData, ...S.dbMetodos])]);
   return fromData;
 }
 
 function getStatsForField(field) {
   const st = Object.create(null);
-  for (const g of allData) {
+  for (const g of S.allData) {
     const v = g[field] || ''; if (!v) continue;
     if (!st[v]) st[v] = { n: 0, t: 0 };
     st[v].n++; st[v].t += safeNumber(g.Importe);
@@ -20,38 +24,34 @@ function getStatsForField(field) {
   return st;
 }
 
-function renderABM() { renderABMList('Centro'); renderABMList('Metodo'); }
+export function renderABM() { renderABMList('Centro'); renderABMList('Metodo'); }
 
 function renderABMList(field) {
   const containerId = field === 'Centro' ? 'abm-centros-list' : 'abm-metodos-list';
   const container = $(containerId); if (!container) return;
   const values = getAllValuesForField(field), stats = getStatsForField(field);
   if (!values.length) { container.innerHTML = '<p class="text-sm italic" style="color:var(--text4)">Sin datos aún</p>'; return; }
-
   container.innerHTML = values.map(v => {
     const s = stats[v];
     const countText = s ? `${s.n} reg. · $${formatearNumero(s.t)}` : 'Sin registros';
     return `<div class="flex items-center gap-2 p-3 rounded-lg border" style="border-color:var(--border-solid);background:var(--kpi-bg)">
-      <div class="flex-1 min-w-0">
-        <div class="font-medium text-sm truncate" style="color:var(--text)">${escapeHtml(v)}</div>
-        <div class="text-xs ${s?'':'italic'}" style="color:var(--text3)">${countText}</div>
-      </div>
-      <button onclick="abmRename('${field}','${escapeAttr(v)}')" class="w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50" title="Renombrar"><i class="fas fa-pen text-xs"></i></button>
-      <button onclick="abmMerge('${field}','${escapeAttr(v)}')" class="w-8 h-8 flex items-center justify-center rounded-lg text-amber-600 hover:bg-amber-50" title="Fusionar"><i class="fas fa-compress-alt text-xs"></i></button>
-      ${!s ? `<button onclick="abmRemoveCustom('${field}','${escapeAttr(v)}')" class="w-8 h-8 flex items-center justify-center rounded-lg text-red-600 hover:bg-red-50" title="Eliminar"><i class="fas fa-trash text-xs"></i></button>` : ''}
+      <div class="flex-1 min-w-0"><div class="font-medium text-sm truncate" style="color:var(--text)">${escapeHtml(v)}</div><div class="text-xs ${s?'':'italic'}" style="color:var(--text3)">${countText}</div></div>
+      <button data-action="abmRename" data-field="${field}" data-value="${escapeAttr(v)}" class="w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50" title="Renombrar"><i class="fas fa-pen text-xs"></i></button>
+      <button data-action="abmMerge" data-field="${field}" data-value="${escapeAttr(v)}" class="w-8 h-8 flex items-center justify-center rounded-lg text-amber-600 hover:bg-amber-50" title="Fusionar"><i class="fas fa-compress-alt text-xs"></i></button>
+      ${!s ? `<button data-action="abmRemoveCustom" data-field="${field}" data-value="${escapeAttr(v)}" class="w-8 h-8 flex items-center justify-center rounded-lg text-red-600 hover:bg-red-50" title="Eliminar"><i class="fas fa-trash text-xs"></i></button>` : ''}
     </div>`;
   }).join('');
   if (field === 'Metodo') updateMetodoSelect();
 }
 
-function updateMetodoSelect() {
+export function updateMetodoSelect() {
   const sel = $('metodo'); if (!sel) return;
   const current = sel.value, values = getAllValuesForField('Metodo');
   sel.innerHTML = values.map(m => `<option value="${escapeAttr(m)}">${escapeHtml(m)}</option>`).join('');
   if (current && values.includes(current)) sel.value = current;
 }
 
-async function abmAdd(field) {
+export async function abmAdd(field) {
   const inputId = field === 'Centro' ? 'abm-centro-nuevo' : 'abm-metodo-nuevo';
   const input = $(inputId), name = (input?.value || '').trim();
   if (!name) { toastWarn('Ingresá un nombre'); return; }
@@ -59,7 +59,7 @@ async function abmAdd(field) {
   const table = field === 'Centro' ? 'centros' : 'metodos_pago';
   showLoading(true);
   try {
-    const { error } = await sb.from(table).insert({ user_id: currentUserId, nombre: name });
+    const { error } = await sb.from(table).insert({ user_id: S.currentUserId, nombre: name });
     if (error) throw error;
     input.value = '';
     if (field === 'Centro') await loadCentrosFromDB(); else await loadMetodosFromDB();
@@ -70,7 +70,7 @@ async function abmAdd(field) {
   finally { showLoading(false); }
 }
 
-async function abmRemoveCustom(field, value) {
+export async function abmRemoveCustom(field, value) {
   const table = field === 'Centro' ? 'centros' : 'metodos_pago';
   showLoading(true);
   try {
@@ -82,7 +82,7 @@ async function abmRemoveCustom(field, value) {
   finally { showLoading(false); }
 }
 
-async function abmRename(field, oldValue) {
+export async function abmRename(field, oldValue) {
   const label = field === 'Centro' ? 'centro' : 'método';
   const newValue = prompt(`Renombrar "${oldValue}"\nNuevo nombre para este ${label}:`, oldValue);
   if (!newValue || !newValue.trim() || newValue.trim() === oldValue) return;
@@ -100,12 +100,12 @@ async function abmRename(field, oldValue) {
     const table = field === 'Centro' ? 'centros' : 'metodos_pago';
     await sb.from(table).update({ nombre: newValue.trim() }).eq('nombre', oldValue);
     if (field === 'Centro') await loadCentrosFromDB(); else await loadMetodosFromDB();
-    await cargarDatos();
+    await registry.cargarDatos?.();
   } catch (e) { toastError(e.message); }
   finally { showLoading(false); }
 }
 
-async function abmMerge(field, sourceValue) {
+export async function abmMerge(field, sourceValue) {
   const label = field === 'Centro' ? 'centro' : 'método';
   const values = getAllValuesForField(field).filter(v => v !== sourceValue);
   if (!values.length) { toastWarn('No hay otro valor para fusionar'); return; }
@@ -124,7 +124,7 @@ async function abmMerge(field, sourceValue) {
     const table = field === 'Centro' ? 'centros' : 'metodos_pago';
     await sb.from(table).delete().eq('nombre', sourceValue);
     if (field === 'Centro') await loadCentrosFromDB(); else await loadMetodosFromDB();
-    await cargarDatos();
+    await registry.cargarDatos?.();
   } catch (e) { toastError(e.message); }
   finally { showLoading(false); }
 }
