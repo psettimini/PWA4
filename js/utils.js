@@ -30,6 +30,10 @@ const uniqueSorted = vals => [...new Set(vals.filter(Boolean))].sort();
 const destroyChart = n => { if (charts[n]) { charts[n].destroy(); charts[n] = null; } };
 const showLoading = show => $('loading')?.classList.toggle('hidden', !show);
 
+/* Form dirty tracking */
+function markFormDirty() { _formDirty = true; }
+function clearFormDirty() { _formDirty = false; }
+
 function formatMesLabel(m) {
   if (!m) return '';
   const n = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -146,7 +150,7 @@ function restoreHistoryFilters() {
 }
 
 function descargarCSV(nombre, contenido) {
-  const blob = new Blob([contenido], { type: 'text/csv' });
+  const blob = new Blob(['\uFEFF' + contenido], { type: 'text/csv;charset=utf-8' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob); link.download = nombre; link.click();
 }

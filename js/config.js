@@ -17,6 +17,11 @@ let syncInProgress = false;
 let dbCentros = [];
 let dbMetodos = [];
 let currentUserId = null;
+let _formDirty = false;
+let _historialPage = 0;
+let _lastWindowWidth = window.innerWidth;
+
+const HISTORIAL_PAGE_SIZE = 50;
 
 const STORAGE_KEYS = {
   dark: 'gastos_dark',
@@ -26,5 +31,5 @@ const STORAGE_KEYS = {
   historyFilters: 'gastos_historial_filters_v1'
 };
 
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.2.0';
 const $ = id => document.getElementById(id);

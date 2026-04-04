@@ -15,14 +15,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   showTab(currentTab);
 
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+  /* Service Worker con notificación de actualización */
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data?.type === 'SW_UPDATED') showUpdateBanner();
+    });
+  }
 
   window.addEventListener('online', () => { updateNetworkStatus('En línea', 'ok'); syncPendingQueue(true); });
   window.addEventListener('offline', () => { updateNetworkStatus('Sin conexión', 'warn'); });
 
-  /* Auth listener */
+  /* Auth listener con detección de sesión expirada */
   sb.auth.onAuthStateChange((event, session) => {
     console.log('[Auth]', event, session ? session.user.email : 'no session');
+    if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
+      if (currentUserId) {
+        currentUserId = null;
+        allData = []; dbCentros = []; dbMetodos = [];
+        toastWarn('Sesión finalizada');
+        showAuth();
+      }
+      return;
+    }
     if (session) {
       currentUserId = session.user.id;
       hideAuth();
@@ -33,6 +48,16 @@ document.addEventListener('DOMContentLoaded', () => {
       showAuth();
     }
   });
+
+  /* Form dirty tracking — event delegation en inputs del formulario */
+  ['fecha','centro','concepto','importe'].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener('input', markFormDirty);
+  });
+  ['tipo','metodo'].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener('change', markFormDirty);
+  });
 });
 
 /* Cerrar sugerencias al hacer click fuera */
@@ -41,14 +66,17 @@ document.addEventListener('click', e => {
     $('suggestions')?.classList.add('hidden');
 });
 
-/* Re-render al cambiar tamaño de ventana */
+/* Re-render al cambiar tamaño de ventana — solo si el ancho cambió */
 window.addEventListener('resize', function() {
   clearTimeout(window.__rt);
   window.__rt = setTimeout(() => {
+    const newWidth = window.innerWidth;
+    if (newWidth === _lastWindowWidth) return;
+    _lastWindowWidth = newWidth;
     try {
       if (!$('section-historial')?.classList.contains('hidden')) renderHistorial();
       if (!$('section-dashboard')?.classList.contains('hidden')) renderDashboard();
       if (!$('section-comparar')?.classList.contains('hidden')) renderComparar();
     } catch(e) {}
-  }, 180);
+  }, 400);
 });

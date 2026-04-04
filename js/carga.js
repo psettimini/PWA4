@@ -12,11 +12,11 @@ async function guardarGasto() {
   if (!record.Fecha || !record.Centro || !record.Concepto || record.Importe === 0) { toastWarn('Completá los campos (importe no puede ser cero)'); return; }
 
   if (!editingId) {
-    const mesActual = record.Fecha ? record.Fecha.slice(0,7) : localMesStr();
+    const mesFecha = record.Fecha ? record.Fecha.slice(0,7) : localMesStr();
     const conceptoLow = record.Concepto.toLowerCase(), centroLow = record.Centro.toLowerCase();
     const repetibles = ['transferencia','transfer','envío','envio','retiro','carga'];
     const esRepetible = repetibles.some(r => conceptoLow.includes(r));
-    const dupes = allData.filter(g => g.Fecha && g.Fecha.startsWith(mesActual) && (g.Concepto||'').toLowerCase() === conceptoLow && (g.Centro||'').toLowerCase() === centroLow);
+    const dupes = allData.filter(g => g.Fecha && g.Fecha.startsWith(mesFecha) && (g.Concepto||'').toLowerCase() === conceptoLow && (g.Centro||'').toLowerCase() === centroLow);
     if (dupes.length > 0) {
       const importesDupes = dupes.map(d => '$' + formatearNumero(d.Importe)).join(', ');
       const msg = esRepetible
@@ -66,6 +66,7 @@ function limpiarFormulario() {
   $('btn-guardar').className = 'flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all';
   $('btn-cancelar').classList.add('hidden');
   $('edit-indicator').classList.add('hidden');
+  _formDirty = false;
 }
 
 function cancelarEdicion() {
@@ -139,57 +140,78 @@ function seleccionarPatron(concepto,centro) {
   $('concepto').value=p.concepto; $('centro').value=p.centro; $('tipo').value=p.tipo; $('metodo').value=p.metodo;
   $('suggestions').classList.add('hidden');
   if(p.promedio>0){$('avg-suggestion').textContent='Promedio: $'+formatearNumero(p.promedio);$('avg-suggestion').classList.remove('hidden');}
+  _formDirty = true;
   $('importe').focus();
 }
 function filtrarSugerencias() { if ($('concepto').value.length >= 2) mostrarSugerencias($('concepto').value); }
 const mostrarSugerenciasDebounced = debounce(mostrarSugerencias, 120);
 
-/* ── Fijos Pendientes ── */
+/* ── Fijos Pendientes (busca en los últimos 3 meses) ── */
 function actualizarSugerencias() {
   const hoy = new Date(), mesActual = localMesStr();
-  const prev1 = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1), mesAnterior = `${prev1.getFullYear()}-${String(prev1.getMonth()+1).padStart(2,'0')}`;
-  const prev2 = new Date(hoy.getFullYear(), hoy.getMonth()-2, 1), mes2Atras = `${prev2.getFullYear()}-${String(prev2.getMonth()+1).padStart(2,'0')}`;
-  const label = formatMesLabel(mesAnterior);
   const ANUAL = 'pagado por el año';
 
+  /* Generar últimos 3 meses */
+  const lookback = [];
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    lookback.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+
+  /* Recopilar fijos: el más reciente de cada concepto+centro gana */
   const fijos = new Map();
   let excluidos = 0, impExcluido = 0;
+
   for (const g of allData) {
-    if (g.Tipo!=='F'||!g.Fecha||!g.Fecha.startsWith(mesAnterior)) continue;
-    if ((g.Metodo||'').trim().toLowerCase()===ANUAL) { excluidos++; impExcluido+=safeNumber(g.Importe); continue; }
+    if (g.Tipo !== 'F' || !g.Fecha) continue;
+    const gMes = g.Fecha.slice(0, 7);
+    if (!lookback.includes(gMes)) continue;
+    if ((g.Metodo || '').trim().toLowerCase() === ANUAL) {
+      if (gMes === lookback[0]) { excluidos++; impExcluido += safeNumber(g.Importe); }
+      continue;
+    }
     const key = `${g.Concepto}|${g.Centro}`;
-    if (fijos.has(key)) fijos.get(key).importe += safeNumber(g.Importe);
-    else fijos.set(key, { concepto:g.Concepto, centro:g.Centro, tipo:g.Tipo, metodo:g.Metodo, importe:safeNumber(g.Importe) });
+    if (fijos.has(key)) {
+      const ex = fijos.get(key);
+      if (gMes > ex._mes) {
+        ex.importe = safeNumber(g.Importe); ex.metodo = g.Metodo; ex._mes = gMes;
+      } else if (gMes === ex._mes) {
+        ex.importe += safeNumber(g.Importe);
+      }
+    } else {
+      fijos.set(key, { concepto: g.Concepto, centro: g.Centro, tipo: g.Tipo, metodo: g.Metodo, importe: safeNumber(g.Importe), _mes: gMes });
+    }
   }
-  const fijos2 = new Map();
-  for (const g of allData) {
-    if (g.Tipo!=='F'||!g.Fecha||!g.Fecha.startsWith(mes2Atras)) continue;
-    if ((g.Metodo||'').trim().toLowerCase()===ANUAL) continue;
-    const key = `${g.Concepto}|${g.Centro}`;
-    if (fijos2.has(key)) fijos2.get(key).importe += safeNumber(g.Importe);
-    else fijos2.set(key, { importe: safeNumber(g.Importe) });
+
+  /* Calcular variación % vs. el mes anterior al fuente */
+  for (const [key, fijo] of fijos) {
+    const srcIdx = lookback.indexOf(fijo._mes);
+    const prevMes = srcIdx < lookback.length - 1 ? lookback[srcIdx + 1] : null;
+    if (!prevMes) { fijo.variacion = null; continue; }
+    let prevImp = 0;
+    for (const g of allData) {
+      if (g.Tipo !== 'F' || !g.Fecha || !g.Fecha.startsWith(prevMes)) continue;
+      if (`${g.Concepto}|${g.Centro}` === key) prevImp += safeNumber(g.Importe);
+    }
+    fijo.variacion = prevImp > 0 ? ((fijo.importe - prevImp) / prevImp * 100) : null;
   }
+
+  /* Filtrar los ya cargados este mes */
   const cargados = new Set();
-  for (const g of allData) { if (g.Fecha&&g.Fecha.startsWith(mesActual)) cargados.add(`${g.Concepto}|${g.Centro}`); }
+  for (const g of allData) { if (g.Fecha && g.Fecha.startsWith(mesActual)) cargados.add(`${g.Concepto}|${g.Centro}`); }
 
   const pend = [];
-  for (const [k,v] of fijos) {
-    if (cargados.has(k)) continue;
-    const ant = fijos2.get(k);
-    v.impAnterior = ant?.importe > 0 ? ant.importe : null;
-    v.variacion = v.impAnterior ? ((v.importe - v.impAnterior) / v.impAnterior * 100) : null;
-    pend.push(v);
-  }
-  pend.sort((a,b)=>b.importe-a.importe);
+  for (const [k, v] of fijos) { if (!cargados.has(k)) pend.push(v); }
+  pend.sort((a, b) => b.importe - a.importe);
 
   $('count-sugerencias').textContent = pend.length;
   const div = $('lista-sugerencias');
-  if (!pend.length) { div.innerHTML = `<p class="text-sm text-emerald-600"><i class="fas fa-check-circle mr-2"></i>¡Todos los fijos de ${label} cargados!</p>`; return; }
+  if (!pend.length) { div.innerHTML = `<p class="text-sm text-emerald-600"><i class="fas fa-check-circle mr-2"></i>¡Todos los fijos cargados!</p>`; return; }
 
-  const tot = pend.reduce((s,p)=>s+p.importe,0);
+  const tot = pend.reduce((s, p) => s + p.importe, 0);
   div.innerHTML =
-    `<div class="text-xs text-slate-500 mb-2 flex justify-between"><span>Pendientes vs ${label}</span><span class="font-bold text-red-600">$${formatearNumero(tot)}</span></div>` +
-    (excluidos>0?`<div class="text-xs text-slate-400 mb-2 italic"><i class="fas fa-info-circle mr-1"></i>${excluidos} anual(es) excluidos ($${formatearNumero(impExcluido)})</div>`:'')+
+    `<div class="text-xs text-slate-500 mb-2 flex justify-between"><span>Pendientes (últimos 3 meses)</span><span class="font-bold text-red-600">$${formatearNumero(tot)}</span></div>` +
+    (excluidos > 0 ? `<div class="text-xs text-slate-400 mb-2 italic"><i class="fas fa-info-circle mr-1"></i>${excluidos} anual(es) excluidos ($${formatearNumero(impExcluido)})</div>` : '') +
     pend.map(s => {
       let varHtml = '';
       if (s.variacion !== null) {
@@ -198,8 +220,9 @@ function actualizarSugerencias() {
         const color = up ? 'text-red-500' : down ? 'text-emerald-500' : 'text-slate-400';
         varHtml = `<span class="text-xs ${color} ml-1">${arrow}${Math.abs(s.variacion).toFixed(0)}%</span>`;
       }
+      const fromLabel = s._mes !== lookback[0] ? `<span class="text-xs text-slate-400 ml-1">(${formatMesLabel(s._mes)})</span>` : '';
       return `<div class="flex items-center gap-2 p-2 bg-amber-50 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-100 transition-colors" onclick="seleccionarFijo('${escapeAttr(s.concepto)}','${escapeAttr(s.centro)}','${escapeAttr(s.tipo)}','${escapeAttr(s.metodo)}',${s.importe})">
-        <div class="flex-1 min-w-0"><div class="text-sm font-bold truncate">${escapeHtml(s.concepto)}</div><div class="text-xs text-amber-800">${escapeHtml(s.centro)}</div></div>
+        <div class="flex-1 min-w-0"><div class="text-sm font-bold truncate">${escapeHtml(s.concepto)}${fromLabel}</div><div class="text-xs text-amber-800">${escapeHtml(s.centro)}</div></div>
         <div class="text-right whitespace-nowrap"><div class="text-sm font-bold text-amber-700">$${formatearNumero(s.importe)}${varHtml}</div></div>
         <button onclick="event.stopPropagation();guardarFijoRapido('${escapeAttr(s.concepto)}','${escapeAttr(s.centro)}','${escapeAttr(s.tipo)}','${escapeAttr(s.metodo)}',${s.importe},this)" class="ml-1 w-9 h-9 flex-shrink-0 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm" title="Cargar directo"><i class="fas fa-bolt"></i></button>
       </div>`;
@@ -208,7 +231,9 @@ function actualizarSugerencias() {
 
 function seleccionarFijo(c,ce,t,m,i) {
   $('concepto').value=c; $('centro').value=ce; $('tipo').value=t; $('metodo').value=m; $('importe').value=i;
-  $('suggestions').classList.add('hidden'); $('avg-suggestion').classList.add('hidden'); $('importe').focus();
+  $('suggestions').classList.add('hidden'); $('avg-suggestion').classList.add('hidden');
+  _formDirty = true;
+  $('importe').focus();
 }
 
 async function guardarFijoRapido(concepto, centro, tipo, metodo, importe, btn) {

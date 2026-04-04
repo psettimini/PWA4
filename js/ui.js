@@ -74,6 +74,13 @@ function toggleDarkMode() {
 
 /* ── Tabs ── */
 function showTab(tab) {
+  /* Dirty form check: warn when leaving Carga with unsaved data */
+  if (currentTab === 'carga' && tab !== 'carga' && _formDirty) {
+    const hasContent = ($('concepto')?.value || '').trim() || ($('importe')?.value || '').trim();
+    if (hasContent && !confirm('Tenés cambios sin guardar en el formulario. ¿Salir igual?')) return;
+  }
+  _formDirty = false;
+
   currentTab = tab;
   localStorage.setItem('gastos_tab', tab);
   ['carga','historial','dashboard','comparar','config'].forEach(t => {
@@ -84,10 +91,24 @@ function showTab(tab) {
   $('section-'+tab)?.classList.remove('hidden');
   const b = $('tab-'+tab); if (b) { b.classList.add('tab-active'); b.classList.remove('text-slate-600'); }
   const bn = $('bnav-'+tab); if (bn) bn.classList.add('bnav-active');
-  if (tab==='historial') { restoreHistoryFilters(); renderHistorial(); }
+  if (tab==='historial') { _historialPage = 0; restoreHistoryFilters(); renderHistorial(); }
   if (tab==='dashboard') renderDashboard();
   if (tab==='comparar') initComparar();
   if (tab==='config') renderABM();
+}
+
+/* ── SW Update Banner ── */
+function showUpdateBanner() {
+  const banner = $('sw-update-banner');
+  if (!banner) return;
+  banner.classList.remove('hidden');
+  requestAnimationFrame(() => { banner.style.transform = 'translateY(0)'; });
+}
+function dismissUpdateBanner() {
+  const banner = $('sw-update-banner');
+  if (!banner) return;
+  banner.style.transform = 'translateY(-100%)';
+  setTimeout(() => banner.classList.add('hidden'), 300);
 }
 
 /* ── Pull to Refresh ── */

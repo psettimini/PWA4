@@ -30,6 +30,16 @@
   <div><i id="pull-arrow" class="fas fa-arrow-down"></i><i id="pull-spin" class="fas fa-sync spinner"></i><span id="pull-text">Soltar para actualizar</span></div>
 </div>
 
+<!-- SW Update Banner -->
+<div id="sw-update-banner" class="fixed top-0 left-0 right-0 text-center hidden" style="z-index:45;transform:translateY(-100%);transition:transform .3s ease">
+  <div class="bg-blue-600 text-white py-2.5 px-4 flex items-center justify-center gap-3 text-sm">
+    <i class="fas fa-arrow-up"></i>
+    <span>Nueva versión disponible</span>
+    <button type="button" onclick="location.reload()" class="px-3 py-1 bg-white text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-50">Actualizar</button>
+    <button type="button" onclick="dismissUpdateBanner()" class="text-blue-200 hover:text-white"><i class="fas fa-times"></i></button>
+  </div>
+</div>
+
 <!-- Auth overlay -->
 <div id="auth-overlay" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden">
   <div class="bg-white rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl" style="background:var(--surface-solid)">
@@ -250,7 +260,7 @@
           <button type="button" onclick="cargarDatos()" class="px-6 py-2 bg-slate-600 text-white rounded-lg"><i class="fas fa-sync mr-2"></i>Recargar</button>
           <button type="button" onclick="exportarCSV()" class="px-6 py-2 bg-emerald-600 text-white rounded-lg"><i class="fas fa-download mr-2"></i>CSV</button>
         </div>
-        <div class="flex items-center justify-between p-4 rounded-lg border" style="border-color:var(--border-solid);background:var(--kpi-bg)"><div><span class="font-medium" style="color:var(--text)">Versión de la app</span><p class="text-xs" style="color:var(--text3)">Control visual de la versión publicada</p></div><span id="app-version" class="text-sm font-semibold px-3 py-1 rounded-full" style="background:var(--pill-bg);border:1px solid var(--pill-border);color:var(--pill-text)">Versión 2.1.0</span></div>
+        <div class="flex items-center justify-between p-4 rounded-lg border" style="border-color:var(--border-solid);background:var(--kpi-bg)"><div><span class="font-medium" style="color:var(--text)">Versión de la app</span><p class="text-xs" style="color:var(--text3)">Control visual de la versión publicada</p></div><span id="app-version" class="text-sm font-semibold px-3 py-1 rounded-full" style="background:var(--pill-bg);border:1px solid var(--pill-border);color:var(--pill-text)">Versión 2.2.0</span></div>
         <div class="flex items-center justify-between p-4 rounded-lg border" style="border-color:var(--border-solid);background:var(--kpi-bg)"><div><span class="font-medium" style="color:var(--text)">Modo oscuro</span><p class="text-xs" style="color:var(--text3)">Cambia la apariencia de la app</p></div><button type="button" onclick="toggleDarkMode()" id="dark-toggle" class="relative w-14 h-8 rounded-full transition-colors" style="background:var(--input-border)"><span id="dark-toggle-dot" class="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform"></span></button></div>
         <div class="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-4"><h4 class="font-bold text-blue-800 mb-2"><i class="fas fa-mobile-alt mr-2"></i>Instalar en iPhone</h4><p class="text-sm text-blue-700">Safari → <i class="fas fa-share-square"></i> Compartir → <strong>"Agregar a Inicio"</strong></p></div>
       </div>
