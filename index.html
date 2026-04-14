@@ -1,1 +1,296 @@
-index.html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Gastos">
+  <meta name="theme-color" content="#ffffff">
+  <title>Gestión de Gastos</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="text-slate-800">
+
+<!-- Loading -->
+<div id="loading" class="fixed inset-0 bg-white/80 flex items-center justify-center z-40 hidden">
+  <div class="flex items-center gap-3"><i class="fas fa-circle-notch fa-spin text-3xl text-blue-600"></i><span class="text-lg font-medium text-slate-700">Cargando...</span></div>
+</div>
+
+<!-- Pull to refresh -->
+<div id="pull-indicator" style="transform:translateY(-100%)">
+  <div><i id="pull-arrow" class="fas fa-arrow-down"></i><i id="pull-spin" class="fas fa-sync spinner"></i><span id="pull-text">Soltar para actualizar</span></div>
+</div>
+
+<!-- SW Update Banner -->
+<div id="sw-update-banner" class="fixed top-0 left-0 right-0 text-center hidden" style="z-index:45;transform:translateY(-100%);transition:transform .3s ease">
+  <div class="bg-blue-600 text-white py-2.5 px-4 flex items-center justify-center gap-3 text-sm">
+    <i class="fas fa-arrow-up"></i>
+    <span>Nueva versión disponible</span>
+    <button type="button" data-action="reload" class="px-3 py-1 bg-white text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-50">Actualizar</button>
+    <button type="button" data-action="dismissUpdateBanner" class="text-blue-200 hover:text-white"><i class="fas fa-times"></i></button>
+  </div>
+</div>
+
+<!-- Auth overlay -->
+<div id="auth-overlay" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl" style="background:var(--surface-solid)">
+    <div class="text-center mb-6">
+      <i class="fas fa-wallet text-5xl text-blue-600 mb-3"></i>
+      <h2 class="text-2xl font-bold" style="color:var(--text)">Gestión de Gastos</h2>
+      <p id="auth-subtitle" class="mt-2" style="color:var(--text3)">Iniciá sesión para continuar</p>
+    </div>
+    <!-- Login -->
+    <div id="auth-form-login" class="space-y-4">
+      <div><label class="block text-sm font-medium mb-1" style="color:var(--text2)">Email</label><input type="email" id="auth-email" placeholder="tu@email.com" class="w-full px-4 py-3 rounded-xl border-2 focus:border-blue-500 focus:outline-none" style="border-color:var(--input-border);background:var(--input-bg);color:var(--text)"></div>
+      <div><label class="block text-sm font-medium mb-1" style="color:var(--text2)">Contraseña</label><input type="password" id="auth-password" placeholder="Tu contraseña" class="w-full px-4 py-3 rounded-xl border-2 focus:border-blue-500 focus:outline-none" style="border-color:var(--input-border);background:var(--input-bg);color:var(--text)"></div>
+      <button type="button" data-action="doLogin" id="btn-login" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all"><i class="fas fa-sign-in-alt mr-2"></i>Iniciar sesión</button>
+      <div class="text-center text-sm space-y-2">
+        <button type="button" data-action="showAuthMode" data-mode="register" class="text-blue-600 hover:underline block mx-auto">¿No tenés cuenta? Registrate</button>
+        <button type="button" data-action="showAuthMode" data-mode="reset" class="hover:underline block mx-auto" style="color:var(--text3)">Olvidé mi contraseña</button>
+      </div>
+    </div>
+    <!-- Register -->
+    <div id="auth-form-register" class="space-y-4 hidden">
+      <div><label class="block text-sm font-medium mb-1" style="color:var(--text2)">Email</label><input type="email" id="auth-reg-email" placeholder="tu@email.com" class="w-full px-4 py-3 rounded-xl border-2 focus:border-blue-500 focus:outline-none" style="border-color:var(--input-border);background:var(--input-bg);color:var(--text)"></div>
+      <div><label class="block text-sm font-medium mb-1" style="color:var(--text2)">Contraseña</label><input type="password" id="auth-reg-password" placeholder="Mínimo 6 caracteres" class="w-full px-4 py-3 rounded-xl border-2 focus:border-blue-500 focus:outline-none" style="border-color:var(--input-border);background:var(--input-bg);color:var(--text)"></div>
+      <button type="button" data-action="doRegister" id="btn-register" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-all"><i class="fas fa-user-plus mr-2"></i>Crear cuenta gratis</button>
+      <div class="text-center text-sm"><button type="button" data-action="showAuthMode" data-mode="login" class="text-blue-600 hover:underline">Ya tengo cuenta</button></div>
+    </div>
+    <!-- Reset -->
+    <div id="auth-form-reset" class="space-y-4 hidden">
+      <div><label class="block text-sm font-medium mb-1" style="color:var(--text2)">Email</label><input type="email" id="auth-reset-email" placeholder="tu@email.com" class="w-full px-4 py-3 rounded-xl border-2 focus:border-blue-500 focus:outline-none" style="border-color:var(--input-border);background:var(--input-bg);color:var(--text)"></div>
+      <button type="button" data-action="doResetPassword" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl transition-all"><i class="fas fa-envelope mr-2"></i>Enviar link de recuperación</button>
+      <div class="text-center text-sm"><button type="button" data-action="showAuthMode" data-mode="login" class="text-blue-600 hover:underline">Volver a iniciar sesión</button></div>
+    </div>
+    <p id="auth-error" class="text-red-600 text-sm text-center mt-3 hidden"></p>
+    <p id="auth-success" class="text-emerald-600 text-sm text-center mt-3 hidden"></p>
+  </div>
+</div>
+
+<!-- Nav -->
+<nav class="bg-white border-b border-slate-200 sticky top-0 z-30">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="nav-inner flex justify-between h-16 items-center">
+      <div class="nav-brand flex items-center gap-3">
+        <i class="fas fa-wallet text-2xl text-blue-600"></i>
+        <span class="brand-title font-bold text-xl">Gastos</span>
+        <span id="connection-status" class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded-full">—</span>
+        <button type="button" data-action="toggleDarkMode" class="ml-auto text-lg" style="color:var(--text3)" title="Modo oscuro"><i id="dark-icon" class="fas fa-moon"></i></button>
+      </div>
+      <div class="tab-bar flex gap-3 md:gap-6 text-sm overflow-x-auto no-scrollbar py-1">
+        <button type="button" data-action="showTab" data-tab="carga" id="tab-carga" class="tab-active py-5 px-2">Carga</button>
+        <button type="button" data-action="showTab" data-tab="historial" id="tab-historial" class="py-5 px-2 text-slate-600">Historial</button>
+        <button type="button" data-action="showTab" data-tab="dashboard" id="tab-dashboard" class="py-5 px-2 text-slate-600">Dashboard</button>
+        <button type="button" data-action="showTab" data-tab="comparar" id="tab-comparar" class="py-5 px-2 text-slate-600">Comparar</button>
+        <button type="button" data-action="showTab" data-tab="config" id="tab-config" class="py-5 px-2 text-slate-600"><i class="fas fa-cog"></i></button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div id="app-status-bar" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3">
+  <div class="glass-panel rounded-2xl px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
+    <div class="flex items-center gap-2"><span id="network-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span><span id="network-label" class="font-medium">Listo</span></div>
+    <div class="flex items-center gap-3 flex-wrap">
+      <span id="cache-label" class="text-slate-500">Sin caché</span>
+      <span id="pending-badge" class="hidden text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">0 pendientes</span>
+      <button type="button" data-action="syncPending" id="btn-sync-pending" class="hidden px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-semibold"><i class="fas fa-rotate mr-1"></i>Sincronizar</button>
+    </div>
+  </div>
+</div>
+
+<div class="main-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- ==================== CARGA ==================== -->
+  <div id="section-carga" class="fade-in">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 glass-panel rounded-2xl p-6">
+        <h2 class="text-2xl font-bold mb-6">Cargar Gasto</h2>
+        <form class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 grid-form">
+            <div><label for="fecha" class="block text-sm font-medium text-slate-700 mb-1">Fecha</label><input type="date" id="fecha" required class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500" style="width:100%;max-width:100%;box-sizing:border-box"></div>
+            <div><label for="centro" class="block text-sm font-medium text-slate-700 mb-1">Centro de Gasto</label><input type="text" id="centro" list="centros-list" required class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500"><datalist id="centros-list"></datalist></div>
+          </div>
+          <div class="relative">
+            <label for="concepto" class="block text-sm font-medium text-slate-700 mb-1">Concepto</label>
+            <input type="text" id="concepto" required class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
+            <div id="suggestions" class="suggestions hidden"></div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 grid-form">
+            <div><label for="tipo" class="block text-sm font-medium text-slate-700 mb-1">Tipo</label><select id="tipo" class="w-full px-4 py-2 rounded-lg border border-slate-300"><option value="F">Fijo</option><option value="V">Variable</option></select></div>
+            <div class="md:col-span-2 md-col-span-2"><label for="metodo" class="block text-sm font-medium text-slate-700 mb-1">Método de Pago</label><select id="metodo" class="w-full px-4 py-2 rounded-lg border border-slate-300"><option value="Efectivo">Efectivo</option></select></div>
+          </div>
+          <div>
+            <label for="importe" class="block text-sm font-medium text-slate-700 mb-1">Importe ($)</label>
+            <input type="text" id="importe" required inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 text-lg font-semibold">
+            <p id="avg-suggestion" class="text-xs text-slate-500 mt-1 hidden"></p>
+          </div>
+          <div id="acciones-carga" class="flex flex-col md:flex-row gap-3">
+            <button type="button" data-action="guardarGasto" id="btn-guardar" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all"><i class="fas fa-save mr-2"></i>Guardar</button>
+            <button type="button" data-action="cancelarEdicion" id="btn-cancelar" class="px-6 bg-slate-400 hover:bg-slate-500 text-white font-bold py-3 rounded-lg transition-all hidden"><i class="fas fa-times mr-2"></i>Cancelar</button>
+          </div>
+          <p id="edit-indicator" class="text-xs text-amber-600 font-medium mt-1 hidden"><i class="fas fa-edit mr-1"></i>Editando registro existente</p>
+        </form>
+      </div>
+      <div class="space-y-6">
+        <div class="glass-panel rounded-2xl p-6">
+          <h3 class="font-bold text-slate-800 mb-4 flex justify-between"><span><i class="fas fa-clock text-amber-500 mr-1"></i>Fijos Pendientes</span><span id="count-sugerencias" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">0</span></h3>
+          <div id="lista-sugerencias" class="space-y-2 max-h-80 overflow-y-auto"><p class="text-sm text-slate-400 italic">Cargá datos para ver fijos pendientes</p></div>
+        </div>
+        <div class="glass-panel rounded-2xl p-6">
+          <h3 class="font-bold text-slate-800 mb-4">Resumen del Mes</h3>
+          <div class="space-y-3 resumen-grid">
+            <div class="flex justify-between"><span class="text-slate-600">Total:</span><span id="resumen-total" class="font-bold text-blue-600">$0</span></div>
+            <div class="flex justify-between"><span class="text-slate-600">Cantidad:</span><span id="resumen-cantidad" class="font-bold">0</span></div>
+            <div class="flex justify-between"><span class="text-slate-600">Promedio:</span><span id="resumen-promedio" class="font-bold">$0</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== HISTORIAL ==================== -->
+  <div id="section-historial" class="hidden fade-in">
+    <div class="glass-panel rounded-2xl p-6">
+      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+        <h2 class="text-2xl font-bold">Historial</h2>
+        <div class="filter-row flex flex-wrap gap-2 w-full lg:w-auto">
+          <input type="text" id="buscar-historial" placeholder="Buscar..." class="px-4 py-2 rounded-lg border border-slate-300 text-sm w-full sm:w-auto">
+          <select id="filtro-centro" data-change="filtrarHistorial" class="px-4 py-2 rounded-lg border border-slate-300 text-sm"><option value="todos">Todos los centros</option></select>
+          <select id="filtro-tipo" data-change="filtrarHistorial" class="px-4 py-2 rounded-lg border border-slate-300 text-sm"><option value="todos">Todos los tipos</option><option value="F">Fijos</option><option value="V">Variables</option></select>
+          <select id="filtro-metodo" data-change="filtrarHistorial" class="px-4 py-2 rounded-lg border border-slate-300 text-sm"><option value="todos">Todos los métodos</option></select>
+          <select id="filtro-mes-historial" data-change="filtrarHistorial" class="px-4 py-2 rounded-lg border border-slate-300 text-sm"><option value="todos">Todos los meses</option></select>
+          <button type="button" data-action="limpiarFiltros" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm hover:bg-slate-300"><i class="fas fa-undo mr-1"></i>Limpiar</button>
+        </div>
+      </div>
+      <div class="flex justify-between items-center mb-4 text-sm text-slate-600">
+        <span id="resultados-count">0 registros</span>
+        <button type="button" data-action="exportarHistorialFiltrado" class="text-emerald-600 hover:text-emerald-800"><i class="fas fa-download mr-1"></i>Exportar</button>
+      </div>
+      <div id="historial-cards-mobile" class="mobile-cards space-y-3 mb-4"></div>
+      <div class="overflow-x-auto desktop-table-wrap">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-200"><tr><th class="py-3 px-4 text-left font-semibold">Fecha</th><th class="py-3 px-4 text-left font-semibold">Centro</th><th class="py-3 px-4 text-left font-semibold">Concepto</th><th class="py-3 px-4 text-left font-semibold">Tipo</th><th class="py-3 px-4 text-left font-semibold">Método</th><th class="py-3 px-4 text-right font-semibold">Importe</th><th class="py-3 px-4 text-center font-semibold">Acc.</th></tr></thead>
+          <tbody id="tabla-historial" class="divide-y divide-slate-100"><tr><td colspan="7" class="py-8 text-center text-slate-400">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== DASHBOARD ==================== -->
+  <div id="section-dashboard" class="hidden fade-in space-y-6">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div class="rounded-2xl p-5 bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md"><p class="text-blue-100 text-xs">Mes Actual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-mes-actual">$0</h3></div>
+      <div class="rounded-2xl p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md"><p class="text-emerald-100 text-xs">Promedio Mensual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-promedio">$0</h3></div>
+      <div class="rounded-2xl p-5 bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-md"><p class="text-purple-100 text-xs">Gastos Fijos</p><h3 class="text-xl md:text-3xl font-bold" id="dash-fijos">0%</h3></div>
+      <div class="rounded-2xl p-5 bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-md"><p class="text-amber-100 text-xs">Movimientos del Mes</p><h3 class="text-xl md:text-3xl font-bold" id="dash-movimientos">0</h3></div>
+      <div class="rounded-2xl p-5 bg-gradient-to-br from-pink-500 to-pink-600 text-white shadow-md"><p class="text-pink-100 text-xs">Ticket Promedio</p><h3 class="text-xl md:text-3xl font-bold" id="dash-ticket-promedio">$0</h3></div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="glass-panel rounded-2xl p-6"><h3 class="font-bold mb-4">Evolución Mensual</h3><canvas id="chart-evolucion" height="250"></canvas></div>
+      <div class="glass-panel rounded-2xl p-6"><h3 class="font-bold mb-2">Por Centro de Gasto</h3><p class="text-xs text-slate-500 mb-4">Porcentaje calculado sobre los gastos históricos totales.</p><div class="relative" style="height:320px"><canvas id="chart-centros"></canvas></div></div>
+      <div class="glass-panel rounded-2xl p-6 lg:col-span-2">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <h3 class="font-bold">Evolución Histórica por Centro de Gasto</h3>
+          <div class="flex gap-2 w-full md:w-auto"><select id="evolucion-centro" data-change="renderEvolucionCentro" class="px-4 py-2 rounded-lg border border-slate-300 text-sm flex-1 md:flex-none"><option value="">Seleccionar centro...</option></select><button type="button" data-action="renderEvolucionCentro" class="px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><i class="fas fa-chart-bar"></i></button></div>
+        </div>
+        <canvas id="chart-evolucion-centro" height="250" style="display:none"></canvas>
+        <div id="evolucion-centro-stats" class="mt-4 grid grid-cols-3 gap-4 text-center text-sm"></div>
+      </div>
+      <div class="glass-panel rounded-2xl p-6 lg:col-span-2">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <h3 class="font-bold">Evolución de Concepto</h3>
+          <div class="flex gap-2 w-full md:w-auto"><select id="evolucion-concepto" data-change="renderEvolucionConcepto" class="px-4 py-2 rounded-lg border border-slate-300 text-sm flex-1 md:flex-none"><option value="">Seleccionar...</option></select><button type="button" data-action="renderEvolucionConcepto" class="px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><i class="fas fa-chart-bar"></i></button></div>
+        </div>
+        <canvas id="chart-evolucion-concepto" height="250"></canvas>
+        <div id="evolucion-stats" class="mt-4 grid grid-cols-3 gap-4 text-center text-sm"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== COMPARAR ==================== -->
+  <div id="section-comparar" class="hidden fade-in space-y-6">
+    <div class="glass-panel rounded-2xl p-6">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h2 class="text-2xl font-bold">Comparar Meses</h2>
+        <div class="comp-selectors flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span><select id="comp-mes1" data-change="renderComparar" class="px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium"><option value="">Mes A...</option></select></div>
+          <span class="text-slate-400 font-bold hidden md:inline">vs</span>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span><select id="comp-mes2" data-change="renderComparar" class="px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium"><option value="">Mes B...</option></select></div>
+          <select id="comp-vista" data-change="renderComparar" class="px-4 py-2 rounded-lg border border-slate-300 text-sm"><option value="centro">Por Centro</option><option value="concepto">Por Concepto</option><option value="tipo">Por Tipo</option><option value="metodo">Por Método</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Total Mes A</p><h3 class="text-xl md:text-2xl font-bold text-blue-600" id="comp-total1">$0</h3></div>
+      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Total Mes B</p><h3 class="text-xl md:text-2xl font-bold text-amber-600" id="comp-total2">$0</h3></div>
+      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Diferencia</p><h3 class="text-xl md:text-2xl font-bold" id="comp-diff">$0</h3></div>
+      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Variación</p><h3 class="text-xl md:text-2xl font-bold" id="comp-pct">0%</h3></div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="glass-panel rounded-2xl p-6"><h3 class="font-bold mb-4">Comparación</h3><canvas id="chart-comp-barras" height="280"></canvas></div>
+      <div class="glass-panel rounded-2xl p-6"><h3 class="font-bold mb-4">Distribución</h3><div class="grid grid-cols-2 gap-4"><div><p class="text-sm font-medium text-blue-600 mb-2 text-center" id="comp-donut-label1">A</p><canvas id="chart-comp-donut1" height="200"></canvas></div><div><p class="text-sm font-medium text-amber-600 mb-2 text-center" id="comp-donut-label2">B</p><canvas id="chart-comp-donut2" height="200"></canvas></div></div></div>
+    </div>
+    <div class="glass-panel rounded-2xl p-6">
+      <h3 class="font-bold mb-4">Detalle</h3>
+      <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 border-b border-slate-200"><tr><th class="py-3 px-4 text-left font-semibold">Categoría</th><th class="py-3 px-4 text-right font-semibold text-blue-600">Mes A</th><th class="py-3 px-4 text-right font-semibold text-amber-600">Mes B</th><th class="py-3 px-4 text-right font-semibold">Dif.</th><th class="py-3 px-4 text-right font-semibold">%</th><th class="py-3 px-4 font-semibold hidden md:table-cell" style="min-width:200px">Visual</th></tr></thead><tbody id="comp-tabla-body" class="divide-y divide-slate-100"><tr><td colspan="6" class="py-8 text-center text-slate-400">Seleccioná dos meses</td></tr></tbody><tfoot id="comp-tabla-foot" class="bg-slate-50 border-t-2 border-slate-300 font-bold"></tfoot></table></div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="glass-panel rounded-2xl p-6"><h3 class="font-bold mb-4 text-amber-600"><i class="fas fa-plus-circle mr-2"></i>Nuevos en B</h3><div id="comp-nuevos" class="space-y-2 max-h-64 overflow-y-auto"><p class="text-sm text-slate-400 italic">Seleccioná dos meses</p></div></div>
+      <div class="glass-panel rounded-2xl p-6"><h3 class="font-bold mb-4 text-blue-600"><i class="fas fa-minus-circle mr-2"></i>Solo en A</h3><div id="comp-eliminados" class="space-y-2 max-h-64 overflow-y-auto"><p class="text-sm text-slate-400 italic">Seleccioná dos meses</p></div></div>
+    </div>
+  </div>
+
+  <!-- ==================== CONFIG ==================== -->
+  <div id="section-config" class="hidden fade-in space-y-6">
+    <div class="glass-panel rounded-2xl p-6 max-w-2xl">
+      <h2 class="text-2xl font-bold mb-6">Configuración</h2>
+      <div class="space-y-4">
+        <div class="flex items-center justify-between p-4 rounded-lg border" style="border-color:var(--border-solid);background:var(--kpi-bg)"><div><span class="font-medium" style="color:var(--text)"><i class="fas fa-user text-blue-600 mr-2"></i>Cuenta</span><p id="config-user-email" class="text-xs mt-1" style="color:var(--text3)">—</p></div><button type="button" data-action="doLogout" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-semibold hover:bg-red-200"><i class="fas fa-sign-out-alt mr-1"></i>Salir</button></div>
+        <div class="flex flex-col md:flex-row gap-3 pt-2">
+          <button type="button" data-action="cargarDatos" class="px-6 py-2 bg-slate-600 text-white rounded-lg"><i class="fas fa-sync mr-2"></i>Recargar</button>
+          <button type="button" data-action="exportarCSV" class="px-6 py-2 bg-emerald-600 text-white rounded-lg"><i class="fas fa-download mr-2"></i>CSV</button>
+        </div>
+        <div class="flex items-center justify-between p-4 rounded-lg border" style="border-color:var(--border-solid);background:var(--kpi-bg)"><div><span class="font-medium" style="color:var(--text)">Versión de la app</span><p class="text-xs" style="color:var(--text3)">Control visual de la versión publicada</p></div><span id="app-version" class="text-sm font-semibold px-3 py-1 rounded-full" style="background:var(--pill-bg);border:1px solid var(--pill-border);color:var(--pill-text)">Versión 2.3.0</span></div>
+        <div class="flex items-center justify-between p-4 rounded-lg border" style="border-color:var(--border-solid);background:var(--kpi-bg)"><div><span class="font-medium" style="color:var(--text)">Modo oscuro</span><p class="text-xs" style="color:var(--text3)">Cambia la apariencia de la app</p></div><button type="button" data-action="toggleDarkMode" id="dark-toggle" class="relative w-14 h-8 rounded-full transition-colors" style="background:var(--input-border)"><span id="dark-toggle-dot" class="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform"></span></button></div>
+        <div class="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-4"><h4 class="font-bold text-blue-800 mb-2"><i class="fas fa-mobile-alt mr-2"></i>Instalar en iPhone</h4><p class="text-sm text-blue-700">Safari → <i class="fas fa-share-square"></i> Compartir → <strong>"Agregar a Inicio"</strong></p></div>
+      </div>
+    </div>
+    <div class="glass-panel rounded-2xl p-6 max-w-2xl">
+      <h3 class="font-bold text-lg mb-1"><i class="fas fa-building text-blue-600 mr-2"></i>Centros de Gasto</h3>
+      <p class="text-xs mb-4" style="color:var(--text3)">Agregar, renombrar o fusionar. Los cambios se aplican a todos los registros históricos.</p>
+      <div class="flex gap-2 mb-4"><input type="text" id="abm-centro-nuevo" placeholder="Nuevo centro..." class="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-sm"><button type="button" data-action="abmAdd" data-field="Centro" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold"><i class="fas fa-plus mr-1"></i>Agregar</button></div>
+      <div id="abm-centros-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
+    </div>
+    <div class="glass-panel rounded-2xl p-6 max-w-2xl">
+      <h3 class="font-bold text-lg mb-1"><i class="fas fa-credit-card text-emerald-600 mr-2"></i>Métodos de Pago</h3>
+      <p class="text-xs mb-4" style="color:var(--text3)">Agregar, renombrar o fusionar. Los cambios se aplican a todos los registros históricos.</p>
+      <div class="flex gap-2 mb-4"><input type="text" id="abm-metodo-nuevo" placeholder="Nuevo método..." class="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-sm"><button type="button" data-action="abmAdd" data-field="Metodo" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold"><i class="fas fa-plus mr-1"></i>Agregar</button></div>
+      <div id="abm-metodos-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom nav (mobile) -->
+<div class="bottom-nav" id="bottom-nav">
+  <button type="button" data-action="showTab" data-tab="carga" id="bnav-carga" class="bnav-active"><i class="fas fa-plus-circle"></i><span>Carga</span></button>
+  <button type="button" data-action="showTab" data-tab="historial" id="bnav-historial"><i class="fas fa-list"></i><span>Historial</span></button>
+  <button type="button" data-action="showTab" data-tab="dashboard" id="bnav-dashboard"><i class="fas fa-chart-pie"></i><span>Dashboard</span></button>
+  <button type="button" data-action="showTab" data-tab="comparar" id="bnav-comparar"><i class="fas fa-balance-scale"></i><span>Comparar</span></button>
+  <button type="button" data-action="showTab" data-tab="config" id="bnav-config"><i class="fas fa-cog"></i><span>Config</span></button>
+</div>
+
+<!-- Single module entry point -->
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

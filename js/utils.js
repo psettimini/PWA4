@@ -4,7 +4,7 @@
 ======================================== */
 import { $, S, STORAGE_KEYS } from './state.js';
 
-export const safeNumber = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+export const safeNumber = v => { const n = parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : 0; };
 export const formatearNumero = n => parseInt(n || 0, 10).toLocaleString('es-AR');
 
 export function localDateStr() {
