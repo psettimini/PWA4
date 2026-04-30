@@ -146,3 +146,55 @@ export function descargarCSV(nombre, contenido) {
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob); link.download = nombre; link.click();
 }
+
+/* \u2500\u2500 Descartes manuales de fijos pendientes \u2500\u2500 */
+const DISMISSALS_MAX_AGE_MONTHS = 12;
+
+function olderThanCutoff(mes, cutoff) {
+  return mes < cutoff;
+}
+
+export function getDismissals() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEYS.dismissals) || '[]');
+    if (!Array.isArray(raw)) return [];
+    const now = new Date();
+    const cutoffDate = new Date(now.getFullYear(), now.getMonth() - DISMISSALS_MAX_AGE_MONTHS, 1);
+    const cutoff = `${cutoffDate.getFullYear()}-${String(cutoffDate.getMonth()+1).padStart(2,'0')}`;
+    return raw.filter(d => d && d.key && d.mes && !olderThanCutoff(d.mes, cutoff));
+  } catch { return []; }
+}
+
+export function setDismissals(arr) {
+  localStorage.setItem(STORAGE_KEYS.dismissals, JSON.stringify(arr));
+}
+
+export function addDismissal(key, mes) {
+  const all = getDismissals();
+  if (!all.some(d => d.key === key && d.mes === mes)) all.push({ key, mes });
+  setDismissals(all);
+}
+
+export function clearDismissalsForKey(key) {
+  setDismissals(getDismissals().filter(d => d.key !== key));
+}
+
+export function buildDismissalsMap() {
+  const map = new Map();
+  for (const d of getDismissals()) {
+    if (!map.has(d.key)) map.set(d.key, new Set());
+    map.get(d.key).add(d.mes);
+  }
+  return map;
+}
+
+export function hasConsecutiveDismissals(meses) {
+  const arr = [...meses].sort();
+  for (let i = 1; i < arr.length; i++) {
+    const [py, pm] = arr[i-1].split('-').map(Number);
+    const next = new Date(py, pm); /* pm es 1-12; new Date(y, pm) \u2192 primer d\u00EDa del mes siguiente */
+    const nextStr = `${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`;
+    if (arr[i] === nextStr) return true;
+  }
+  return false;
+}

@@ -25,7 +25,7 @@ export const S = {
 };
 
 export const HISTORIAL_PAGE_SIZE = 50;
-export const APP_VERSION = '2.4.0';
+export const APP_VERSION = '2.4.1';
 export const MONEDAS = ['ARS', 'USD'];
 export const MONEDA_DEFAULT = 'ARS';
 export const STORAGE_KEYS = {
@@ -33,7 +33,8 @@ export const STORAGE_KEYS = {
   dataCache: 'gastos_data_cache_v4',
   cacheMeta: 'gastos_data_cache_meta_v4',
   pendingQueue: 'gastos_pending_queue_v3',
-  historyFilters: 'gastos_historial_filters_v2'
+  historyFilters: 'gastos_historial_filters_v2',
+  dismissals: 'gastos_fijos_dismissed_v1'
 };
 
 export const $ = id => document.getElementById(id);

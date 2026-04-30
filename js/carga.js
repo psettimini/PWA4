@@ -3,8 +3,12 @@
    carga.js — Usa registry.cargarDatos y registry.renderHistorial
 ======================================== */
 import { $, S, sb, registry, MONEDA_DEFAULT } from './state.js';
-import { safeNumber, formatearNumero, formatImporte, localDateStr, localMesStr, getMesKey, uniqueSorted, escapeHtml, escapeAttr, formatMesLabel, enqueueOperation, saveCache, debounce, showLoading } from './utils.js';
+import { safeNumber, formatearNumero, formatImporte, localDateStr, localMesStr, getMesKey, uniqueSorted, escapeHtml, escapeAttr, formatMesLabel, enqueueOperation, saveCache, debounce, showLoading, buildDismissalsMap, hasConsecutiveDismissals, addDismissal, clearDismissalsForKey } from './utils.js';
 import { toast, toastWarn, toastError, modalConfirm } from './ui.js';
+
+function fijoKey(concepto, centro, moneda) {
+  return `${concepto}|${centro}|${moneda || 'ARS'}`;
+}
 
 export function setMoneda(m) {
   const moneda = (m === 'USD') ? 'USD' : 'ARS';
@@ -59,6 +63,7 @@ export async function guardarGasto() {
       if (error) throw error;
     }
     const wasEdit = !!S.editingId;
+    if (!wasEdit) clearDismissalsForKey(fijoKey(record.Concepto, record.Centro, record.Moneda));
     limpiarFormulario(); await registry.cargarDatos?.();
     if (navigator.vibrate) navigator.vibrate(50);
     toast(wasEdit ? '¡Actualizado!' : '¡Guardado!');
@@ -71,6 +76,7 @@ export async function guardarGasto() {
     } else {
       enqueueOperation({ action: 'add', payload: { data: record } });
       S.allData.unshift({ ...record, ID: 'local-' + Date.now(), _pending: true });
+      clearDismissalsForKey(fijoKey(record.Concepto, record.Centro, record.Moneda));
       toastWarn('Sin conexión. Gasto guardado localmente.');
     }
     saveCache(S.allData); procesarPatrones(); actualizarSugerencias(); actualizarResumen();
@@ -213,8 +219,15 @@ export function actualizarSugerencias() {
   }
   const cargados = new Set();
   for (const g of S.allData) { if (g.Fecha && g.Fecha.startsWith(mesActual)) cargados.add(`${g.Concepto}|${g.Centro}|${g.Moneda || 'ARS'}`); }
+  const dismissals = buildDismissalsMap();
   const pend = [];
-  for (const [k, v] of fijos) { if (!cargados.has(k)) pend.push(v); }
+  for (const [k, v] of fijos) {
+    if (cargados.has(k)) continue;
+    const meses = dismissals.get(k);
+    if (meses && meses.has(mesActual)) continue;
+    if (meses && hasConsecutiveDismissals(meses)) continue;
+    pend.push(v);
+  }
   pend.sort((a, b) => b.importe - a.importe);
 
   $('count-sugerencias').textContent = pend.length;
@@ -237,6 +250,7 @@ export function actualizarSugerencias() {
       return `<div class="flex items-center gap-2 p-2 bg-amber-50 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-100 transition-colors" data-action="seleccionarFijo" data-concepto="${escapeAttr(s.concepto)}" data-centro="${escapeAttr(s.centro)}" data-tipo="${escapeAttr(s.tipo)}" data-metodo="${escapeAttr(s.metodo)}" data-moneda="${escapeAttr(s.moneda)}" data-importe="${s.importe}">
         <div class="flex-1 min-w-0"><div class="text-sm font-bold truncate">${escapeHtml(s.concepto)}${monedaTag}${fromLabel}</div><div class="text-xs text-amber-800">${escapeHtml(s.centro)}</div></div>
         <div class="text-right whitespace-nowrap"><div class="text-sm font-bold text-amber-700">${formatImporte(s.importe, s.moneda)}${varHtml}</div></div>
+        <button data-action="dismissFijoPendiente" data-concepto="${escapeAttr(s.concepto)}" data-centro="${escapeAttr(s.centro)}" data-moneda="${escapeAttr(s.moneda)}" class="ml-1 w-7 h-7 flex-shrink-0 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md text-xs" title="Descartar de pendientes"><i class="fas fa-times"></i></button>
         <button data-action="guardarFijoRapido" data-concepto="${escapeAttr(s.concepto)}" data-centro="${escapeAttr(s.centro)}" data-tipo="${escapeAttr(s.tipo)}" data-metodo="${escapeAttr(s.metodo)}" data-moneda="${escapeAttr(s.moneda)}" data-importe="${s.importe}" class="ml-1 w-9 h-9 flex-shrink-0 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm" title="Cargar directo"><i class="fas fa-bolt"></i></button>
       </div>`;
     }).join('');
@@ -249,6 +263,17 @@ export function seleccionarFijo(concepto, centro, tipo, metodo, importe, moneda)
   S.formDirty = true; $('importe').focus();
 }
 
+export function dismissFijoPendiente(concepto, centro, moneda) {
+  const key = fijoKey(concepto, centro, moneda);
+  const mes = localMesStr();
+  addDismissal(key, mes);
+  const meses = buildDismissalsMap().get(key);
+  const permanente = meses && hasConsecutiveDismissals(meses);
+  actualizarSugerencias();
+  if (permanente) toast(`"${concepto}" no aparecerá más como fijo pendiente`);
+  else toast(`"${concepto}" descartado este mes`);
+}
+
 export async function guardarFijoRapido(concepto, centro, tipo, metodo, importe, moneda, btn) {
   const fecha = localDateStr(), originalHtml = btn.innerHTML;
   const m = moneda === 'USD' ? 'USD' : 'ARS';
@@ -256,6 +281,7 @@ export async function guardarFijoRapido(concepto, centro, tipo, metodo, importe,
   try {
     const { error } = await sb.from('gastos').insert({ user_id: S.currentUserId, fecha, centro, tipo, concepto, metodo, importe, moneda: m });
     if (error) throw error;
+    clearDismissalsForKey(fijoKey(concepto, centro, m));
     btn.innerHTML = '<i class="fas fa-check"></i>';
     btn.className = btn.className.replace('bg-emerald-500 hover:bg-emerald-600','bg-slate-300');
     if (navigator.vibrate) navigator.vibrate(50);
