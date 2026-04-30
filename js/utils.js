@@ -5,6 +5,24 @@
 import { $, S, STORAGE_KEYS } from './state.js';
 
 export const safeNumber = v => { const n = parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : 0; };
+
+/* evalExpresion: evalúa expresiones aritméticas simples (+ - * / paréntesis).
+   Whitelist estricta de caracteres → no permite letras ni acceso a globals.
+   Coma se interpreta como decimal (es-AR). Devuelve NaN si la expresión es inválida. */
+export function evalExpresion(s) {
+  const trimmed = String(s ?? '').trim();
+  if (trimmed === '') return 0;
+  if (!/^[\d.,+\-*/()\s]+$/.test(trimmed)) return NaN;
+  const expr = trimmed.replace(/,/g, '.').replace(/\s+/g, '');
+  if (!expr) return 0;
+  if (/[+\-*/]$/.test(expr)) return NaN;
+  try {
+    const r = Function('"use strict"; return (' + expr + ');')();
+    return (typeof r === 'number' && Number.isFinite(r)) ? r : NaN;
+  } catch {
+    return NaN;
+  }
+}
 export const formatearNumero = n => parseInt(n || 0, 10).toLocaleString('es-AR');
 export const monedaPrefix = m => m === 'USD' ? 'U$S ' : '$';
 export const formatImporte = (n, moneda = 'ARS') => `${monedaPrefix(moneda)}${formatearNumero(Math.abs(n))}`;

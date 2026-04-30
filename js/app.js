@@ -7,7 +7,7 @@ import { setFechaHoy, updateCacheLabel, updatePendingBadge, updateNetworkStatus,
 import { initDarkMode, showTab, showUpdateBanner, dismissUpdateBanner, toast, toastWarn, toggleDarkMode } from './ui.js';
 import { showAuth, hideAuth, showAuthMode, doLogin, doRegister, doResetPassword, doLogout } from './auth.js';
 import { cargarDatos, syncPendingQueue } from './data.js';
-import { guardarGasto, cancelarEdicion, borrarGasto, procesarPatrones, actualizarSugerencias, actualizarResumen, seleccionarPatron, seleccionarFijo, guardarFijoRapido, filtrarSugerencias, mostrarSugerenciasDebounced, navegarSugerencias, setMoneda, dismissFijoPendiente } from './carga.js';
+import { guardarGasto, cancelarEdicion, borrarGasto, procesarPatrones, actualizarSugerencias, actualizarResumen, seleccionarPatron, seleccionarFijo, guardarFijoRapido, filtrarSugerencias, mostrarSugerenciasDebounced, navegarSugerencias, setMoneda, dismissFijoPendiente, evaluarImporteOnBlur } from './carga.js';
 import { renderHistorial, filtrarHistorial, filtrarHistorialDebounced, limpiarFiltros, exportarHistorialFiltrado, exportarCSV, editarGasto, cargarMasHistorial } from './historial.js';
 import { renderDashboard, renderEvolucionCentro, renderEvolucionConcepto } from './dashboard.js';
 import { initComparar, renderComparar } from './comparar.js';
@@ -163,6 +163,9 @@ document.addEventListener('DOMContentLoaded', () => {
   /* Form dirty tracking */
   ['fecha','importe'].forEach(id => { $(id)?.addEventListener('input', () => { S.formDirty = true; }); });
   ['tipo','metodo'].forEach(id => { $(id)?.addEventListener('change', () => { S.formDirty = true; }); });
+
+  /* Importe: evaluar expresión aritmética al perder foco (ej: 100+50 → 150) */
+  $('importe')?.addEventListener('blur', evaluarImporteOnBlur);
 
   /* Form submit prevention */
   document.querySelector('#section-carga form')?.addEventListener('submit', e => e.preventDefault());

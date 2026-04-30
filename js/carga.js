@@ -3,7 +3,7 @@
    carga.js — Usa registry.cargarDatos y registry.renderHistorial
 ======================================== */
 import { $, S, sb, registry, MONEDA_DEFAULT } from './state.js';
-import { safeNumber, formatearNumero, formatImporte, localDateStr, localMesStr, getMesKey, uniqueSorted, escapeHtml, escapeAttr, formatMesLabel, enqueueOperation, saveCache, debounce, showLoading, buildDismissalsMap, hasConsecutiveDismissals, addDismissal, clearDismissalsForKey } from './utils.js';
+import { safeNumber, formatearNumero, formatImporte, localDateStr, localMesStr, getMesKey, uniqueSorted, escapeHtml, escapeAttr, formatMesLabel, enqueueOperation, saveCache, debounce, showLoading, buildDismissalsMap, hasConsecutiveDismissals, addDismissal, clearDismissalsForKey, evalExpresion } from './utils.js';
 import { toast, toastWarn, toastError, modalConfirm } from './ui.js';
 
 function fijoKey(concepto, centro, moneda) {
@@ -26,11 +26,24 @@ function getMonedaForm() {
   return $('moneda')?.value === 'USD' ? 'USD' : 'ARS';
 }
 
+/* Si el importe contiene operadores, evalúa al perder foco y reemplaza el texto
+   por el resultado. Si la expresión es inválida deja el texto como está. */
+export function evaluarImporteOnBlur() {
+  const input = $('importe'); if (!input) return;
+  const raw = input.value.trim();
+  if (!raw || !/[+\-*/]/.test(raw)) return;
+  const v = evalExpresion(raw);
+  if (Number.isFinite(v)) input.value = String(v);
+}
+
 export async function guardarGasto() {
   const btn = $('btn-guardar');
+  const importeEval = evalExpresion($('importe').value);
+  if (Number.isNaN(importeEval)) { toastWarn('Importe inválido. Usá números y operadores + - * / (ej: 100+50)'); return; }
+  if (Number.isFinite(importeEval) && /[+\-*/]/.test($('importe').value.trim())) $('importe').value = String(importeEval);
   const record = {
     Fecha: $('fecha').value, Centro: $('centro').value.trim(), Tipo: $('tipo').value,
-    Concepto: $('concepto').value.trim(), Metodo: $('metodo').value, Importe: safeNumber($('importe').value),
+    Concepto: $('concepto').value.trim(), Metodo: $('metodo').value, Importe: importeEval,
     Moneda: getMonedaForm()
   };
   if (!record.Fecha || !record.Centro || !record.Concepto || record.Importe === 0) { toastWarn('Completá los campos (importe no puede ser cero)'); return; }
