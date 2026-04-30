@@ -62,15 +62,16 @@ Campos del formulario:
 | Concepto | `input[text]` | Requerido | Autocomplete inteligente |
 | Tipo | `select` | — | "F" (Fijo) / "V" (Variable) |
 | Método de Pago | `select` | — | Dinámico desde catálogo |
-| Importe ($) | `input[number]` | Requerido, ≠ 0 | Step 0.01, inputmode decimal |
+| Moneda | toggle ARS/USD | — | Default ARS. Cambia el label del importe a `$` o `U$S` |
+| Importe | `input[text]` | Requerido, ≠ 0 | `inputmode="decimal"`, admite `.` o `,` |
 
 ### Guardar gasto (`guardarGasto()`)
 
 1. Valida campos obligatorios e importe ≠ 0
-2. **Detección de duplicados** (solo al crear): busca en `allData` mismo concepto + centro en el mismo mes
+2. **Detección de duplicados** (solo al crear): busca en `allData` mismo concepto + centro **en la misma moneda** y en el mismo mes
    - Para conceptos "repetibles" (transferencia, envío, retiro, carga): pregunta "¿Cargar otro?"
    - Para el resto: pregunta "¿Cargar igual?"
-   - Muestra los importes de los duplicados existentes
+   - Muestra los importes de los duplicados existentes con su moneda
 3. INSERT o UPDATE en Supabase
 4. **Si offline:** encola operación con `enqueueOperation()`, actualiza datos locales, muestra toast de aviso
 5. Vibración háptica (`navigator.vibrate(50)`) al guardar exitosamente
@@ -95,7 +96,7 @@ Campos del formulario:
 ### Patrones históricos (`procesarPatrones()`)
 
 Analiza `allData` y genera:
-- Mapa de concepto+centro → frecuencia, tipo habitual, método habitual, promedio de importe
+- Mapa de **concepto+centro+moneda** → frecuencia, tipo habitual, método habitual, promedio de importe. Mismo concepto en ARS y USD son patrones distintos.
 - Puebla datalists y selects de filtros (centros, métodos, meses)
 - Combina datos históricos con tablas catálogo (`dbCentros`, `dbMetodos`)
 
@@ -106,9 +107,9 @@ Panel lateral que muestra gastos fijos del mes anterior que todavía no fueron c
 **Lógica:**
 1. Toma gastos tipo "F" del mes anterior
 2. Excluye los que tienen método "pagado por el año"
-3. Compara con los ya cargados en el mes actual (por concepto+centro)
+3. Compara con los ya cargados en el mes actual (por concepto+centro+moneda)
 4. Muestra los pendientes ordenados por importe descendente
-5. Para cada fijo muestra: concepto, centro, importe, y variación % vs. 2 meses atrás (↑ rojo / ↓ verde)
+5. Para cada fijo muestra: concepto, centro, importe (con su moneda), y variación % vs. 2 meses atrás (↑ rojo / ↓ verde). Los gastos en USD llevan un tag `U$S`.
 
 **Acciones por fijo pendiente:**
 - **Click en la card:** Precarga el formulario para revisión antes de guardar
@@ -116,10 +117,10 @@ Panel lateral que muestra gastos fijos del mes anterior que todavía no fueron c
 
 ### Resumen del mes (`actualizarResumen()`)
 
-Panel lateral con 3 métricas del mes actual:
-- **Total:** suma de importes
-- **Cantidad:** número de registros
-- **Promedio:** total / cantidad
+Panel lateral con métricas del mes actual:
+- **Total:** suma de importes en ARS (con línea adicional `U$S X` chica si hay gastos en USD)
+- **Cantidad:** número de registros (suma de ambas monedas)
+- **Promedio:** total/cantidad por moneda (ARS principal, USD chico debajo si aplica)
 
 ---
 
@@ -139,6 +140,7 @@ Panel lateral con 3 métricas del mes actual:
 | Tipo | Select | Todos / Fijos / Variables |
 | Método | Select | Todos / cada método |
 | Mes | Select | Todos / cada mes con datos |
+| Moneda | Select | Todas / ARS / USD |
 
 - Todos los filtros se aplican combinados (AND)
 - Debounce de 200ms en búsqueda de texto
@@ -180,8 +182,10 @@ Las cards se agrupan por separadores con labels inteligentes:
 
 ### KPIs (5 tarjetas con gradientes de color)
 
-| KPI | Cálculo | Color |
-|-----|---------|-------|
+Cada KPI muestra el valor de **ARS** grande y debajo, en chico, el valor en **USD**.
+
+| KPI | Cálculo (por moneda) | Color |
+|-----|----------------------|-------|
 | Mes Actual | Suma importes del mes en curso | Azul |
 | Promedio Mensual | Total histórico / meses distintos | Verde |
 | Gastos Fijos | % del total que es tipo "F" | Púrpura |
@@ -190,10 +194,12 @@ Las cards se agrupan por separadores con labels inteligentes:
 
 ### Gráficos
 
+Selector de moneda (`#dash-moneda`, default ARS) que filtra los datos de **todos** los gráficos del dashboard. Pesos y dólares no se mezclan en una misma serie.
+
 | Gráfico | Tipo | Descripción |
 |---------|------|-------------|
-| Evolución Mensual | Bar chart | Gasto total por mes, todos los meses. Eje Y en $M |
-| Por Centro de Gasto | Doughnut (cutout 58%) | Top 8 centros como % del total histórico |
+| Evolución Mensual | Bar chart | Gasto total por mes, todos los meses. Eje Y en M/k según moneda |
+| Por Centro de Gasto | Doughnut (cutout 58%) | Top 8 centros como % del total histórico (de la moneda activa) |
 | Evolución por Centro | Bar chart + stats | Select de centro → evolución mensual. Stats: total, promedio, último mes |
 | Evolución por Concepto | Bar chart + stats | Select de concepto → evolución mensual. Stats: total, promedio, meses |
 
@@ -210,12 +216,16 @@ Todos los gráficos se destruyen y recrean al cambiar datos o al re-renderizar (
 
 ### KPIs de comparación (4 tarjetas)
 
+Cada KPI muestra el valor en **ARS** grande y debajo, en chico, el valor en **USD**.
+
 | KPI | Color |
 |-----|-------|
-| Total Mes A | Azul |
-| Total Mes B | Amber |
-| Diferencia ($) | Rojo si subió, verde si bajó |
+| Total Mes A | Azul (ARS) / violeta (USD) |
+| Total Mes B | Amber (ARS) / violeta (USD) |
+| Diferencia | Rojo si subió, verde si bajó |
 | Variación (%) | Rojo si subió, verde si bajó |
+
+Selector `#comp-moneda` (default ARS) que filtra **tabla detalle, barras, donuts y nuevos/eliminados** a la moneda elegida.
 
 ### Vistas de comparación
 

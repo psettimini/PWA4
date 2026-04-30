@@ -31,7 +31,7 @@ PWA4/
 ├── css/
 │   └── styles.css          ← Estilos custom + dark mode + responsive
 ├── js/
-│   ├── config.js           ← Configuración Supabase, estado global, constantes
+│   ├── state.js            ← Cliente Supabase, estado global, constantes, registry
 │   ├── utils.js            ← Funciones puras: formateo, cache, cola offline
 │   ├── ui.js               ← Toast, modal, dark mode, tabs, pull-to-refresh
 │   ├── auth.js             ← Login, registro, reset password, logout
@@ -51,9 +51,9 @@ PWA4/
 
 ### Orden de carga de módulos JS
 
-El orden importa porque todas las funciones son globales y hay dependencias entre módulos:
+Los módulos son **ES Modules**. Las dependencias circulares entre módulos se resuelven mediante el `registry` exportado desde `state.js`, que `app.js` puebla tras importar todo. Orden conceptual de dependencias:
 
-1. `config.js` — Supabase client (`sb`), estado global, constantes
+1. `state.js` — Cliente Supabase (`sb`), estado global (`S`), constantes, `registry`
 2. `utils.js` — Helpers puros que usan las constantes de config
 3. `ui.js` — Toast, modal, tabs (usa `$()`, `escapeHtml` de utils)
 4. `auth.js` — Auth (usa `sb`, `$()`, `modalConfirm`, `showAuth/hideAuth`)

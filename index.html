@@ -130,7 +130,14 @@
             <div class="md:col-span-2 md-col-span-2"><label for="metodo" class="block text-sm font-medium text-slate-700 mb-1">Método de Pago</label><select id="metodo" class="w-full px-4 py-2 rounded-lg border border-slate-300"><option value="Efectivo">Efectivo</option></select></div>
           </div>
           <div>
-            <label for="importe" class="block text-sm font-medium text-slate-700 mb-1">Importe ($)</label>
+            <div class="flex items-center justify-between mb-1">
+              <label for="importe" id="importe-moneda-label" class="block text-sm font-medium text-slate-700">Importe ($)</label>
+              <div class="moneda-toggle" role="group" aria-label="Moneda">
+                <button type="button" data-action="setMoneda" data-moneda="ARS" class="moneda-btn moneda-btn-active">ARS</button>
+                <button type="button" data-action="setMoneda" data-moneda="USD" class="moneda-btn">USD</button>
+              </div>
+              <input type="hidden" id="moneda" value="ARS">
+            </div>
             <input type="text" id="importe" required inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 text-lg font-semibold">
             <p id="avg-suggestion" class="text-xs text-slate-500 mt-1 hidden"></p>
           </div>
@@ -150,8 +157,10 @@
           <h3 class="font-bold text-slate-800 mb-4">Resumen del Mes</h3>
           <div class="space-y-3 resumen-grid">
             <div class="flex justify-between"><span class="text-slate-600">Total:</span><span id="resumen-total" class="font-bold text-blue-600">$0</span></div>
+            <div id="resumen-total-usd-row" class="flex justify-between hidden"><span class="text-slate-400 text-xs"></span><span id="resumen-total-usd" class="text-xs font-semibold text-violet-600">U$S 0</span></div>
             <div class="flex justify-between"><span class="text-slate-600">Cantidad:</span><span id="resumen-cantidad" class="font-bold">0</span></div>
             <div class="flex justify-between"><span class="text-slate-600">Promedio:</span><span id="resumen-promedio" class="font-bold">$0</span></div>
+            <div id="resumen-promedio-usd-row" class="flex justify-between hidden"><span class="text-slate-400 text-xs"></span><span id="resumen-promedio-usd" class="text-xs font-semibold text-violet-600">U$S 0</span></div>
           </div>
         </div>
       </div>
@@ -169,6 +178,7 @@
           <select id="filtro-tipo" data-change="filtrarHistorial" class="px-4 py-2 rounded-lg border border-slate-300 text-sm"><option value="todos">Todos los tipos</option><option value="F">Fijos</option><option value="V">Variables</option></select>
           <select id="filtro-metodo" data-change="filtrarHistorial" class="px-4 py-2 rounded-lg border border-slate-300 text-sm"><option value="todos">Todos los métodos</option></select>
           <select id="filtro-mes-historial" data-change="filtrarHistorial" class="px-4 py-2 rounded-lg border border-slate-300 text-sm"><option value="todos">Todos los meses</option></select>
+          <select id="filtro-moneda" data-change="filtrarHistorial" class="px-4 py-2 rounded-lg border border-slate-300 text-sm"><option value="todos">Todas las monedas</option><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (U$S)</option></select>
           <button type="button" data-action="limpiarFiltros" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm hover:bg-slate-300"><i class="fas fa-undo mr-1"></i>Limpiar</button>
         </div>
       </div>
@@ -189,11 +199,14 @@
   <!-- ==================== DASHBOARD ==================== -->
   <div id="section-dashboard" class="hidden fade-in space-y-6">
     <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md"><p class="text-blue-100 text-xs">Mes Actual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-mes-actual">$0</h3></div>
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md"><p class="text-emerald-100 text-xs">Promedio Mensual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-promedio">$0</h3></div>
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-md"><p class="text-purple-100 text-xs">Gastos Fijos</p><h3 class="text-xl md:text-3xl font-bold" id="dash-fijos">0%</h3></div>
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-md"><p class="text-amber-100 text-xs">Movimientos del Mes</p><h3 class="text-xl md:text-3xl font-bold" id="dash-movimientos">0</h3></div>
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-pink-500 to-pink-600 text-white shadow-md"><p class="text-pink-100 text-xs">Ticket Promedio</p><h3 class="text-xl md:text-3xl font-bold" id="dash-ticket-promedio">$0</h3></div>
+      <div class="rounded-2xl p-5 bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md"><p class="text-blue-100 text-xs">Mes Actual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-mes-actual">$0</h3><p class="kpi-usd text-blue-100" id="dash-mes-actual-usd">U$S 0</p></div>
+      <div class="rounded-2xl p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md"><p class="text-emerald-100 text-xs">Promedio Mensual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-promedio">$0</h3><p class="kpi-usd text-emerald-100" id="dash-promedio-usd">U$S 0</p></div>
+      <div class="rounded-2xl p-5 bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-md"><p class="text-purple-100 text-xs">Gastos Fijos</p><h3 class="text-xl md:text-3xl font-bold" id="dash-fijos">0%</h3><p class="kpi-usd text-purple-100" id="dash-fijos-usd">0%</p></div>
+      <div class="rounded-2xl p-5 bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-md"><p class="text-amber-100 text-xs">Movimientos del Mes</p><h3 class="text-xl md:text-3xl font-bold" id="dash-movimientos">0</h3><p class="kpi-usd text-amber-100" id="dash-movimientos-usd">U$S 0</p></div>
+      <div class="rounded-2xl p-5 bg-gradient-to-br from-pink-500 to-pink-600 text-white shadow-md"><p class="text-pink-100 text-xs">Ticket Promedio</p><h3 class="text-xl md:text-3xl font-bold" id="dash-ticket-promedio">$0</h3><p class="kpi-usd text-pink-100" id="dash-ticket-promedio-usd">U$S 0</p></div>
+    </div>
+    <div class="flex justify-end">
+      <div class="flex items-center gap-2"><label for="dash-moneda" class="text-sm text-slate-600">Moneda gráficos:</label><select id="dash-moneda" data-change="renderDashboard" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm font-medium"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (U$S)</option></select></div>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="glass-panel rounded-2xl p-6"><h3 class="font-bold mb-4">Evolución Mensual</h3><canvas id="chart-evolucion" height="250"></canvas></div>
@@ -227,14 +240,15 @@
           <span class="text-slate-400 font-bold hidden md:inline">vs</span>
           <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span><select id="comp-mes2" data-change="renderComparar" class="px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium"><option value="">Mes B...</option></select></div>
           <select id="comp-vista" data-change="renderComparar" class="px-4 py-2 rounded-lg border border-slate-300 text-sm"><option value="centro">Por Centro</option><option value="concepto">Por Concepto</option><option value="tipo">Por Tipo</option><option value="metodo">Por Método</option></select>
+          <select id="comp-moneda" data-change="renderComparar" class="px-4 py-2 rounded-lg border border-slate-300 text-sm"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (U$S)</option></select>
         </div>
       </div>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Total Mes A</p><h3 class="text-xl md:text-2xl font-bold text-blue-600" id="comp-total1">$0</h3></div>
-      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Total Mes B</p><h3 class="text-xl md:text-2xl font-bold text-amber-600" id="comp-total2">$0</h3></div>
-      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Diferencia</p><h3 class="text-xl md:text-2xl font-bold" id="comp-diff">$0</h3></div>
-      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Variación</p><h3 class="text-xl md:text-2xl font-bold" id="comp-pct">0%</h3></div>
+      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Total Mes A</p><h3 class="text-xl md:text-2xl font-bold text-blue-600" id="comp-total1">$0</h3><p class="kpi-usd text-violet-600" id="comp-total1-usd">U$S 0</p></div>
+      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Total Mes B</p><h3 class="text-xl md:text-2xl font-bold text-amber-600" id="comp-total2">$0</h3><p class="kpi-usd text-violet-600" id="comp-total2-usd">U$S 0</p></div>
+      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Diferencia</p><h3 class="text-xl md:text-2xl font-bold" id="comp-diff">$0</h3><p class="kpi-usd" id="comp-diff-usd">U$S 0</p></div>
+      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Variación</p><h3 class="text-xl md:text-2xl font-bold" id="comp-pct">0%</h3><p class="kpi-usd" id="comp-pct-usd">0%</p></div>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="glass-panel rounded-2xl p-6"><h3 class="font-bold mb-4">Comparación</h3><canvas id="chart-comp-barras" height="280"></canvas></div>
@@ -260,7 +274,7 @@
           <button type="button" data-action="cargarDatos" class="px-6 py-2 bg-slate-600 text-white rounded-lg"><i class="fas fa-sync mr-2"></i>Recargar</button>
           <button type="button" data-action="exportarCSV" class="px-6 py-2 bg-emerald-600 text-white rounded-lg"><i class="fas fa-download mr-2"></i>CSV</button>
         </div>
-        <div class="flex items-center justify-between p-4 rounded-lg border" style="border-color:var(--border-solid);background:var(--kpi-bg)"><div><span class="font-medium" style="color:var(--text)">Versión de la app</span><p class="text-xs" style="color:var(--text3)">Control visual de la versión publicada</p></div><span id="app-version" class="text-sm font-semibold px-3 py-1 rounded-full" style="background:var(--pill-bg);border:1px solid var(--pill-border);color:var(--pill-text)">Versión 2.3.0</span></div>
+        <div class="flex items-center justify-between p-4 rounded-lg border" style="border-color:var(--border-solid);background:var(--kpi-bg)"><div><span class="font-medium" style="color:var(--text)">Versión de la app</span><p class="text-xs" style="color:var(--text3)">Control visual de la versión publicada</p></div><span id="app-version" class="text-sm font-semibold px-3 py-1 rounded-full" style="background:var(--pill-bg);border:1px solid var(--pill-border);color:var(--pill-text)">Versión 2.4.0</span></div>
         <div class="flex items-center justify-between p-4 rounded-lg border" style="border-color:var(--border-solid);background:var(--kpi-bg)"><div><span class="font-medium" style="color:var(--text)">Modo oscuro</span><p class="text-xs" style="color:var(--text3)">Cambia la apariencia de la app</p></div><button type="button" data-action="toggleDarkMode" id="dark-toggle" class="relative w-14 h-8 rounded-full transition-colors" style="background:var(--input-border)"><span id="dark-toggle-dot" class="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform"></span></button></div>
         <div class="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-4"><h4 class="font-bold text-blue-800 mb-2"><i class="fas fa-mobile-alt mr-2"></i>Instalar en iPhone</h4><p class="text-sm text-blue-700">Safari → <i class="fas fa-share-square"></i> Compartir → <strong>"Agregar a Inicio"</strong></p></div>
       </div>

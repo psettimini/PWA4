@@ -3,18 +3,21 @@
    historial.js
 ======================================== */
 import { $, S, sb, HISTORIAL_PAGE_SIZE, registry } from './state.js';
-import { escapeHtml, escapeAttr, formatearNumero, formatFechaCorta, getDateGroupLabel, csvEscape, descargarCSV, safeNumber, debounce, persistHistoryFilters, showLoading } from './utils.js';
+import { escapeHtml, escapeAttr, formatearNumero, formatImporte, formatImporteSigned, formatFechaCorta, getDateGroupLabel, csvEscape, descargarCSV, safeNumber, debounce, persistHistoryFilters, showLoading } from './utils.js';
 import { toast, toastError, modalConfirm } from './ui.js';
+import { setMoneda } from './carga.js';
 
 function getFiltrados() {
   const txt=($('buscar-historial')?.value||'').toLowerCase(), mes=$('filtro-mes-historial')?.value||'todos',
-    centro=$('filtro-centro')?.value||'todos', tipo=$('filtro-tipo')?.value||'todos', metodo=$('filtro-metodo')?.value||'todos';
+    centro=$('filtro-centro')?.value||'todos', tipo=$('filtro-tipo')?.value||'todos', metodo=$('filtro-metodo')?.value||'todos',
+    moneda=$('filtro-moneda')?.value||'todos';
   return S.allData.filter(g=>{
     if(txt&&!(g.Concepto||'').toLowerCase().includes(txt)&&!(g.Centro||'').toLowerCase().includes(txt)) return false;
     if(mes!=='todos'&&(!g.Fecha||!g.Fecha.startsWith(mes))) return false;
     if(centro!=='todos'&&g.Centro!==centro) return false;
     if(tipo!=='todos'&&g.Tipo!==tipo) return false;
     if(metodo!=='todos'&&g.Metodo!==metodo) return false;
+    if(moneda!=='todos'&&(g.Moneda||'ARS')!==moneda) return false;
     return true;
   }).sort((a,b)=>(b.Fecha||'').localeCompare(a.Fecha||''));
 }
@@ -32,7 +35,9 @@ export function renderHistorial() {
 
   tbody.innerHTML = top.map(g=>{
     const isNeg = g.Importe < 0, impColor = isNeg ? 'text-red-500' : '';
-    return `<tr class="hover:bg-slate-50"><td class="py-3 px-4">${escapeHtml(g.Fecha)||'-'}</td><td class="py-3 px-4 font-medium">${escapeHtml(g.Centro)}</td><td class="py-3 px-4">${escapeHtml(g.Concepto)}${g._pending?' <span class="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Pendiente</span>':''}</td><td class="py-3 px-4"><span class="px-2 py-1 rounded text-xs ${g.Tipo==='F'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'}">${escapeHtml(g.Tipo)}</span></td><td class="py-3 px-4 text-xs text-slate-500">${escapeHtml(g.Metodo)}</td><td class="py-3 px-4 text-right font-mono ${impColor}">${isNeg?'-':''}$${formatearNumero(Math.abs(g.Importe))}</td><td class="py-3 px-4 text-center"><button data-action="editarGasto" data-id="${escapeAttr(g.ID)}" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button><button data-action="borrarGasto" data-id="${escapeAttr(g.ID)}" data-concepto="${escapeAttr(g.Concepto)}" class="text-red-600"><i class="fas fa-trash"></i></button></td></tr>`;
+    const moneda = g.Moneda || 'ARS';
+    const monedaTag = moneda === 'USD' ? ' <span class="ml-1 text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full font-bold">U$S</span>' : '';
+    return `<tr class="hover:bg-slate-50"><td class="py-3 px-4">${escapeHtml(g.Fecha)||'-'}</td><td class="py-3 px-4 font-medium">${escapeHtml(g.Centro)}</td><td class="py-3 px-4">${escapeHtml(g.Concepto)}${monedaTag}${g._pending?' <span class="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Pendiente</span>':''}</td><td class="py-3 px-4"><span class="px-2 py-1 rounded text-xs ${g.Tipo==='F'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'}">${escapeHtml(g.Tipo)}</span></td><td class="py-3 px-4 text-xs text-slate-500">${escapeHtml(g.Metodo)}</td><td class="py-3 px-4 text-right font-mono ${impColor}">${formatImporteSigned(g.Importe, moneda)}</td><td class="py-3 px-4 text-center"><button data-action="editarGasto" data-id="${escapeAttr(g.ID)}" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button><button data-action="borrarGasto" data-id="${escapeAttr(g.ID)}" data-concepto="${escapeAttr(g.Concepto)}" class="text-red-600"><i class="fas fa-trash"></i></button></td></tr>`;
   }).join('');
   if (hasMore) tbody.innerHTML += `<tr><td colspan="7" class="py-4 text-center"><button data-action="cargarMasHistorial" class="px-6 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-200 transition-colors"><i class="fas fa-chevron-down mr-1"></i>Cargar más (${remaining} restantes)</button></td></tr>`;
 
@@ -42,9 +47,11 @@ export function renderHistorial() {
       const group = getDateGroupLabel(g.Fecha);
       if (group !== lastGroup) { html += `<div class="flex items-center gap-2 mt-3 mb-1 first:mt-0"><span class="text-xs font-bold text-slate-500 uppercase tracking-wide">${group}</span><span class="flex-1 border-t border-slate-200"></span></div>`; lastGroup = group; }
       const isNeg = g.Importe < 0;
+      const moneda = g.Moneda || 'ARS';
       const amountColor = isNeg ? 'text-red-500' : (g.Tipo==='F'?'text-emerald-700':'text-amber-700');
-      const amountDisplay = `${isNeg?'-':''}$${formatearNumero(Math.abs(g.Importe))}`;
-      html += `<div class="hist-swipe-wrapper"><div class="hist-swipe-bg"><div class="hist-swipe-bg-edit"><i class="fas fa-edit"></i> Editar</div><div class="hist-swipe-bg-delete">Borrar <i class="fas fa-trash"></i></div></div><div class="hist-card" data-id="${escapeAttr(g.ID)}" data-concepto="${escapeAttr(g.Concepto)}"><div class="hist-card-top"><div><div class="hist-card-title">${escapeHtml(g.Concepto)}${g._pending?'<span class="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pendiente</span>':''}</div><div class="hist-card-sub">${formatFechaCorta(g.Fecha)} · ${escapeHtml(g.Centro)}</div></div><div class="hist-card-amount ${amountColor}">${amountDisplay}</div></div><div class="hist-card-meta"><span class="hist-pill">${g.Tipo==='F'?'Fijo':'Variable'}</span><span class="hist-pill">${escapeHtml(g.Metodo)}</span></div></div></div>`;
+      const amountDisplay = formatImporteSigned(g.Importe, moneda);
+      const monedaTag = moneda === 'USD' ? '<span class="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 font-bold">U$S</span>' : '';
+      html += `<div class="hist-swipe-wrapper"><div class="hist-swipe-bg"><div class="hist-swipe-bg-edit"><i class="fas fa-edit"></i> Editar</div><div class="hist-swipe-bg-delete">Borrar <i class="fas fa-trash"></i></div></div><div class="hist-card" data-id="${escapeAttr(g.ID)}" data-concepto="${escapeAttr(g.Concepto)}"><div class="hist-card-top"><div><div class="hist-card-title">${escapeHtml(g.Concepto)}${monedaTag}${g._pending?'<span class="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pendiente</span>':''}</div><div class="hist-card-sub">${formatFechaCorta(g.Fecha)} · ${escapeHtml(g.Centro)}</div></div><div class="hist-card-amount ${amountColor}">${amountDisplay}</div></div><div class="hist-card-meta"><span class="hist-pill">${g.Tipo==='F'?'Fijo':'Variable'}</span><span class="hist-pill">${escapeHtml(g.Metodo)}</span></div></div></div>`;
     }
     if (hasMore) html += `<div class="text-center py-4"><button data-action="cargarMasHistorial" class="px-6 py-2.5 bg-blue-100 text-blue-700 rounded-xl text-sm font-semibold hover:bg-blue-200 transition-colors"><i class="fas fa-chevron-down mr-1"></i>Cargar más (${remaining})</button></div>`;
     mob.innerHTML = html;
@@ -59,12 +66,13 @@ export const filtrarHistorialDebounced = debounce(filtrarHistorial, 200);
 export function limpiarFiltros() {
   $('buscar-historial').value=''; $('filtro-centro').value='todos'; $('filtro-tipo').value='todos';
   $('filtro-metodo').value='todos'; $('filtro-mes-historial').value='todos';
+  if ($('filtro-moneda')) $('filtro-moneda').value='todos';
   S.historialPage = 0; persistHistoryFilters(); renderHistorial();
 }
 
 export function exportarHistorialFiltrado() {
-  const f=getFiltrados(); let csv='Fecha,Centro,Tipo,Concepto,Metodo,Importe\n';
-  for(const g of f) csv+=[csvEscape(g.Fecha),csvEscape(g.Centro),csvEscape(g.Tipo),csvEscape(g.Concepto),csvEscape(g.Metodo),csvEscape(g.Importe||0)].join(',')+"\n";
+  const f=getFiltrados(); let csv='Fecha,Centro,Tipo,Concepto,Metodo,Moneda,Importe\n';
+  for(const g of f) csv+=[csvEscape(g.Fecha),csvEscape(g.Centro),csvEscape(g.Tipo),csvEscape(g.Concepto),csvEscape(g.Metodo),csvEscape(g.Moneda||'ARS'),csvEscape(g.Importe||0)].join(',')+"\n";
   descargarCSV('historial.csv',csv);
 }
 
@@ -73,6 +81,7 @@ export function editarGasto(id) {
   S.editingId = id;
   $('fecha').value=g.Fecha||''; $('centro').value=g.Centro||''; $('concepto').value=g.Concepto||'';
   $('tipo').value=g.Tipo||'V'; $('metodo').value=g.Metodo||'Efectivo'; $('importe').value=g.Importe||'';
+  setMoneda(g.Moneda || 'ARS');
   $('btn-guardar').innerHTML='<i class="fas fa-check mr-2"></i>Actualizar';
   $('btn-guardar').className='flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-lg transition-all';
   $('btn-cancelar').classList.remove('hidden');
@@ -82,8 +91,8 @@ export function editarGasto(id) {
 }
 
 export function exportarCSV() {
-  let csv='Fecha,Centro,Tipo,Concepto,Metodo,Importe,ID\n';
-  for(const g of S.allData) csv+=[csvEscape(g.Fecha),csvEscape(g.Centro),csvEscape(g.Tipo),csvEscape(g.Concepto),csvEscape(g.Metodo),csvEscape(g.Importe||0),csvEscape(g.ID)].join(',')+"\n";
+  let csv='Fecha,Centro,Tipo,Concepto,Metodo,Moneda,Importe,ID\n';
+  for(const g of S.allData) csv+=[csvEscape(g.Fecha),csvEscape(g.Centro),csvEscape(g.Tipo),csvEscape(g.Concepto),csvEscape(g.Metodo),csvEscape(g.Moneda||'ARS'),csvEscape(g.Importe||0),csvEscape(g.ID)].join(',')+"\n";
   descargarCSV('gastos.csv',csv);
 }
 

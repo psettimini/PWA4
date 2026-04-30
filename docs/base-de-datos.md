@@ -39,11 +39,13 @@ Tabla principal de registros de gastos.
 | `concepto` | `text` | No | Descripción del gasto |
 | `metodo` | `text` | No | Método de pago utilizado |
 | `importe` | `numeric` | No | Monto (admite negativos para devoluciones) |
+| `moneda` | `text` | No | `"ARS"` (pesos) o `"USD"` (dólares). Default `'ARS'`. CHECK constraint. |
 | `created_at` | `timestamptz` | No | Timestamp de creación |
 
 **Notas:**
 - El importe acepta valores negativos para representar devoluciones. Estos se muestran en rojo con signo menos en la UI.
 - El campo `tipo` solo admite dos valores: `"F"` para gastos fijos y `"V"` para gastos variables.
+- El campo `moneda` solo admite `"ARS"` o `"USD"`. **Pesos y dólares no se mezclan** en agregaciones: KPIs y gráficos los muestran por separado.
 - Todo INSERT requiere `user_id` explícito para satisfacer las políticas RLS.
 
 ---

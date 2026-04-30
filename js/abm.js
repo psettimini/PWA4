@@ -3,7 +3,7 @@
    abm.js
 ======================================== */
 import { $, S, sb, registry } from './state.js';
-import { safeNumber, formatearNumero, uniqueSorted, escapeHtml, escapeAttr, showLoading } from './utils.js';
+import { safeNumber, formatImporte, uniqueSorted, escapeHtml, escapeAttr, showLoading } from './utils.js';
 import { toast, toastWarn, toastError, modalConfirm } from './ui.js';
 import { loadCentrosFromDB, loadMetodosFromDB } from './data.js';
 
@@ -18,8 +18,10 @@ function getStatsForField(field) {
   const st = Object.create(null);
   for (const g of S.allData) {
     const v = g[field] || ''; if (!v) continue;
-    if (!st[v]) st[v] = { n: 0, t: 0 };
-    st[v].n++; st[v].t += safeNumber(g.Importe);
+    if (!st[v]) st[v] = { n: 0, tArs: 0, tUsd: 0 };
+    st[v].n++;
+    if ((g.Moneda || 'ARS') === 'USD') st[v].tUsd += safeNumber(g.Importe);
+    else st[v].tArs += safeNumber(g.Importe);
   }
   return st;
 }
@@ -33,7 +35,13 @@ function renderABMList(field) {
   if (!values.length) { container.innerHTML = '<p class="text-sm italic" style="color:var(--text4)">Sin datos aún</p>'; return; }
   container.innerHTML = values.map(v => {
     const s = stats[v];
-    const countText = s ? `${s.n} reg. · $${formatearNumero(s.t)}` : 'Sin registros';
+    let countText = 'Sin registros';
+    if (s) {
+      const totales = [];
+      if (s.tArs > 0) totales.push(formatImporte(s.tArs, 'ARS'));
+      if (s.tUsd > 0) totales.push(formatImporte(s.tUsd, 'USD'));
+      countText = `${s.n} reg.${totales.length ? ' · ' + totales.join(' · ') : ''}`;
+    }
     return `<div class="flex items-center gap-2 p-3 rounded-lg border" style="border-color:var(--border-solid);background:var(--kpi-bg)">
       <div class="flex-1 min-w-0"><div class="font-medium text-sm truncate" style="color:var(--text)">${escapeHtml(v)}</div><div class="text-xs ${s?'':'italic'}" style="color:var(--text3)">${countText}</div></div>
       <button data-action="abmRename" data-field="${field}" data-value="${escapeAttr(v)}" class="w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50" title="Renombrar"><i class="fas fa-pen text-xs"></i></button>

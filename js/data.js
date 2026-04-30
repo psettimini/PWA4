@@ -30,7 +30,8 @@ async function fetchGastos() {
 function transformGastos(raw) {
   return raw.map(g => ({
     Fecha: g.fecha, Centro: g.centro, Tipo: g.tipo, Concepto: g.concepto,
-    Metodo: g.metodo, Importe: Number(g.importe), ID: g.id, _raw: g
+    Metodo: g.metodo, Importe: Number(g.importe), Moneda: g.moneda || 'ARS',
+    ID: g.id, _raw: g
   }));
 }
 
@@ -90,11 +91,11 @@ export async function syncPendingQueue(showFeedback = false) {
     try {
       if (item.action === 'add') {
         const r = item.payload.data;
-        const { error } = await sb.from('gastos').insert({ user_id: S.currentUserId, fecha: r.Fecha, centro: r.Centro, tipo: r.Tipo, concepto: r.Concepto, metodo: r.Metodo, importe: r.Importe });
+        const { error } = await sb.from('gastos').insert({ user_id: S.currentUserId, fecha: r.Fecha, centro: r.Centro, tipo: r.Tipo, concepto: r.Concepto, metodo: r.Metodo, importe: r.Importe, moneda: r.Moneda || 'ARS' });
         if (error) throw error;
       } else if (item.action === 'update') {
         const r = item.payload.record;
-        const { error } = await sb.from('gastos').update({ fecha: r.Fecha, centro: r.Centro, tipo: r.Tipo, concepto: r.Concepto, metodo: r.Metodo, importe: r.Importe }).eq('id', item.payload.id);
+        const { error } = await sb.from('gastos').update({ fecha: r.Fecha, centro: r.Centro, tipo: r.Tipo, concepto: r.Concepto, metodo: r.Metodo, importe: r.Importe, moneda: r.Moneda || 'ARS' }).eq('id', item.payload.id);
         if (error) throw error;
       } else if (item.action === 'delete') {
         const { error } = await sb.from('gastos').delete().eq('id', item.payload.id);

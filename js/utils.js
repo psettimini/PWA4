@@ -6,6 +6,9 @@ import { $, S, STORAGE_KEYS } from './state.js';
 
 export const safeNumber = v => { const n = parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : 0; };
 export const formatearNumero = n => parseInt(n || 0, 10).toLocaleString('es-AR');
+export const monedaPrefix = m => m === 'USD' ? 'U$S ' : '$';
+export const formatImporte = (n, moneda = 'ARS') => `${monedaPrefix(moneda)}${formatearNumero(Math.abs(n))}`;
+export const formatImporteSigned = (n, moneda = 'ARS') => `${n < 0 ? '-' : ''}${monedaPrefix(moneda)}${formatearNumero(Math.abs(n))}`;
 
 export function localDateStr() {
   const d = new Date();
@@ -122,7 +125,8 @@ export function persistHistoryFilters() {
   localStorage.setItem(STORAGE_KEYS.historyFilters, JSON.stringify({
     buscar: $('buscar-historial')?.value || '', centro: $('filtro-centro')?.value || 'todos',
     tipo: $('filtro-tipo')?.value || 'todos', metodo: $('filtro-metodo')?.value || 'todos',
-    mes: $('filtro-mes-historial')?.value || 'todos'
+    mes: $('filtro-mes-historial')?.value || 'todos',
+    moneda: $('filtro-moneda')?.value || 'todos'
   }));
 }
 export function restoreHistoryFilters() {
@@ -133,6 +137,7 @@ export function restoreHistoryFilters() {
     if ($('filtro-tipo')) $('filtro-tipo').value = f.tipo || 'todos';
     if ($('filtro-metodo')) $('filtro-metodo').value = f.metodo || 'todos';
     if ($('filtro-mes-historial')) $('filtro-mes-historial').value = f.mes || 'todos';
+    if ($('filtro-moneda')) $('filtro-moneda').value = f.moneda || 'todos';
   } catch {}
 }
 

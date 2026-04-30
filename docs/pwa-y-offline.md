@@ -23,7 +23,7 @@ Al actualizar `CACHE_VERSION`, el Service Worker invalida y recrea los caches.
 index.html
 manifest.json
 css/styles.css
-js/config.js
+js/state.js
 js/utils.js
 js/ui.js
 js/auth.js

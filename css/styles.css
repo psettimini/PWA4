@@ -19,6 +19,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);-webk
 .comp-bar-mes1{background:#3b82f6}.comp-bar-mes2{background:#f59e0b}
 .comp-highlight-row:hover{background:var(--kpi-bg)}
 .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+.moneda-toggle{display:inline-flex;gap:.25rem;background:var(--pill-bg);padding:.25rem;border-radius:.5rem;border:1px solid var(--pill-border)}
+.moneda-btn{padding:.4rem .9rem;border-radius:.375rem;font-size:.85rem;font-weight:600;color:var(--text3);background:transparent;transition:background .15s,color .15s;cursor:pointer;border:none}
+.moneda-btn-active{background:#2563eb;color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.dark .moneda-btn-active{background:#3b82f6}
+.kpi-usd{font-size:.8rem;font-weight:600;opacity:.85;margin-top:.15rem}
 
 /* Dark mode overrides */
 .dark input,.dark select,.dark textarea{background:var(--input-bg);color:var(--text);border-color:var(--input-border)}

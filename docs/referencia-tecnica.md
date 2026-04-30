@@ -4,7 +4,10 @@
 
 ---
 
-## Estado Global (`config.js`)
+## Estado Global (`state.js`)
+
+> El estado global vive en el objeto `S` exportado desde `state.js`. Los campos listados abajo son propiedades de `S` (p. ej. `S.allData`, `S.charts`).
+
 
 | Variable | Tipo | Descripción |
 |----------|------|-------------|
@@ -26,12 +29,14 @@
 |-----------|-------|-------------|
 | `SUPABASE_URL` | `https://vljwkvtivthwwerqxisc.supabase.co` | URL del proyecto Supabase |
 | `SUPABASE_ANON_KEY` | JWT string | Clave pública anon |
-| `APP_VERSION` | `'2.1.0'` | Versión de la app |
+| `APP_VERSION` | `'2.4.0'` | Versión de la app |
+| `MONEDAS` | `['ARS','USD']` | Monedas soportadas |
+| `MONEDA_DEFAULT` | `'ARS'` | Moneda por defecto al cargar un gasto nuevo |
 | `STORAGE_KEYS.dark` | `'gastos_dark'` | Key localStorage para dark mode |
-| `STORAGE_KEYS.dataCache` | `'gastos_data_cache_v3'` | Key localStorage para datos |
-| `STORAGE_KEYS.cacheMeta` | `'gastos_data_cache_meta_v3'` | Key localStorage para metadata cache |
-| `STORAGE_KEYS.pendingQueue` | `'gastos_pending_queue_v2'` | Key localStorage para cola offline |
-| `STORAGE_KEYS.historyFilters` | `'gastos_historial_filters_v1'` | Key localStorage para filtros historial |
+| `STORAGE_KEYS.dataCache` | `'gastos_data_cache_v4'` | Key localStorage para datos |
+| `STORAGE_KEYS.cacheMeta` | `'gastos_data_cache_meta_v4'` | Key localStorage para metadata cache |
+| `STORAGE_KEYS.pendingQueue` | `'gastos_pending_queue_v3'` | Key localStorage para cola offline |
+| `STORAGE_KEYS.historyFilters` | `'gastos_historial_filters_v2'` | Key localStorage para filtros historial |
 | `$` | `id => document.getElementById(id)` | Selector shorthand |
 
 ---
@@ -44,6 +49,9 @@
 |---------|-------|-------------|
 | `safeNumber` | `(v) → number` | Parsea a float, retorna 0 si no es finito |
 | `formatearNumero` | `(n) → string` | Entero formateado con `toLocaleString('es-AR')` |
+| `formatImporte` | `(n, moneda) → string` | Importe con prefijo (`$ X` para ARS, `U$S X` para USD) |
+| `formatImporteSigned` | `(n, moneda) → string` | Importe con signo y prefijo (negativos en rojo) |
+| `monedaPrefix` | `(m) → string` | Prefijo: `'$'` para ARS, `'U$S '` para USD |
 | `localDateStr` | `() → string` | Fecha local YYYY-MM-DD (evita desfase UTC) |
 | `localMesStr` | `() → string` | Mes local YYYY-MM |
 | `setFechaHoy` | `() → void` | Setea input fecha a hoy |
@@ -196,5 +204,5 @@
 | Idioma UI | Español argentino con voseo ("Iniciá", "Ingresá", "Completá") |
 | Meses abreviados | Ene, Feb, Mar, Abr, May, Jun, Jul, Ago, Sep, Oct, Nov, Dic |
 | Meses completos | Enero, Febrero, ..., Diciembre |
-| Moneda | Peso argentino ($), sin decimales en display |
+| Monedas | ARS (`$`) y USD (`U$S`), sin decimales en display. No se mezclan en agregaciones. |
 | Días de semana | Domingo, Lunes, ..., Sábado (para agrupación en historial) |
