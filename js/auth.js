@@ -1,8 +1,8 @@
 /* ========================================
-   AUTH — Login, Registro, Reset, Logout
+   AUTH — Login, Registro, Reset, Logout, Perfil
    auth.js
 ======================================== */
-import { $, S, sb, STORAGE_KEYS } from './state.js';
+import { $, S, sb, STORAGE_KEYS, registry } from './state.js';
 import { modalConfirm } from './ui.js';
 
 export function showAuth() { $('auth-overlay').classList.remove('hidden'); showAuthMode('login'); }
@@ -61,8 +61,44 @@ export async function doLogout() {
   if (!await modalConfirm('¿Cerrar sesión?')) return;
   await sb.auth.signOut();
   S.allData = []; S.dbCentros = []; S.dbMetodos = []; S.currentUserId = null;
+  S.userRole = 'owner'; S.viewerOf = null;
+  document.body.classList.remove('is-viewer');
   localStorage.removeItem(STORAGE_KEYS.dataCache);
   localStorage.removeItem(STORAGE_KEYS.cacheMeta);
   localStorage.removeItem(STORAGE_KEYS.pendingQueue);
   showAuth();
+}
+
+/* ── Perfil del usuario actual ──
+   Determina si el usuario es 'owner' o 'viewer' (consulta).
+   Los 'viewer' ven los datos del owner referenciado por viewer_of, sin poder modificar nada. */
+export async function loadUserProfile() {
+  if (!S.currentUserId) return;
+  try {
+    const { data, error } = await sb.from('profiles')
+      .select('role, viewer_of')
+      .eq('id', S.currentUserId)
+      .single();
+    if (error || !data) {
+      S.userRole = 'owner';
+      S.viewerOf = null;
+      return;
+    }
+    S.userRole = data.role || 'owner';
+    S.viewerOf = data.viewer_of || null;
+  } catch {
+    S.userRole = 'owner';
+    S.viewerOf = null;
+  }
+}
+
+/* ── Aplica el modo viewer en la UI ──
+   Agrega/quita la clase 'is-viewer' al body. El CSS oculta todo lo marcado .owner-only.
+   Si la tab actual era 'carga', redirige a 'historial'. */
+export function applyRoleUI() {
+  const isViewer = S.userRole === 'viewer';
+  document.body.classList.toggle('is-viewer', isViewer);
+  if (isViewer && S.currentTab === 'carga') {
+    registry.showTab?.('historial');
+  }
 }

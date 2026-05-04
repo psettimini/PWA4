@@ -17,6 +17,8 @@ export const S = {
   dbCentros: [],
   dbMetodos: [],
   currentUserId: null,
+  userRole: 'owner',
+  viewerOf: null,
   formDirty: false,
   historialPage: 0,
   lastWindowWidth: window.innerWidth,
@@ -25,7 +27,7 @@ export const S = {
 };
 
 export const HISTORIAL_PAGE_SIZE = 50;
-export const APP_VERSION = '2.4.2';
+export const APP_VERSION = '2.4.3';
 export const MONEDAS = ['ARS', 'USD'];
 export const MONEDA_DEFAULT = 'ARS';
 export const STORAGE_KEYS = {
