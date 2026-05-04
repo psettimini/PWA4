@@ -137,3 +137,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);-webk
   canvas{max-width:100%!important}
 }
 @media(min-width:769px){.mobile-cards{display:none!important}}
+
+/* ── Read-only viewer mode ── */
+body.is-viewer .owner-only{display:none!important}
+.viewer-badge{display:inline-flex;align-items:center;gap:.35rem;background:#f59e0b;color:#fff;font-size:.65rem;font-weight:700;padding:.15rem .55rem;border-radius:9999px;letter-spacing:.04em;text-transform:uppercase;box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.viewer-banner{display:none;background:linear-gradient(90deg,#fef3c7,#fde68a);border-bottom:1px solid #fbbf24;color:#78350f;font-size:.78rem;font-weight:600;text-align:center;padding:.4rem .75rem}
+body.is-viewer .viewer-banner{display:block}
+.dark body.is-viewer .viewer-banner,body.is-viewer.dark .viewer-banner{background:linear-gradient(90deg,#78350f,#92400e);color:#fef3c7;border-bottom-color:#b45309}
