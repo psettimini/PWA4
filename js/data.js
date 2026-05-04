@@ -82,6 +82,7 @@ export async function cargarDatos() {
 }
 
 export async function syncPendingQueue(showFeedback = false) {
+  if (S.userRole === 'viewer') return; // viewers no escriben → no sincronizan
   const queue = getPendingQueue();
   if (!queue.length || !navigator.onLine || S.syncInProgress || !S.currentUserId) return;
   S.syncInProgress = true;

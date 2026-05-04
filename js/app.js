@@ -5,7 +5,7 @@
 import { $, S, sb, APP_VERSION, registry } from './state.js';
 import { setFechaHoy, updateCacheLabel, updatePendingBadge, updateNetworkStatus, restoreHistoryFilters, debounce } from './utils.js';
 import { initDarkMode, showTab, showUpdateBanner, dismissUpdateBanner, toast, toastWarn, toggleDarkMode } from './ui.js';
-import { showAuth, hideAuth, showAuthMode, doLogin, doRegister, doResetPassword, doLogout } from './auth.js';
+import { showAuth, hideAuth, showAuthMode, doLogin, doRegister, doResetPassword, doLogout, loadUserProfile, applyRoleUI } from './auth.js';
 import { cargarDatos, syncPendingQueue } from './data.js';
 import { guardarGasto, cancelarEdicion, borrarGasto, procesarPatrones, actualizarSugerencias, actualizarResumen, seleccionarPatron, seleccionarFijo, guardarFijoRapido, filtrarSugerencias, mostrarSugerenciasDebounced, navegarSugerencias, setMoneda, dismissFijoPendiente, evaluarImporteOnBlur } from './carga.js';
 import { renderHistorial, filtrarHistorial, filtrarHistorialDebounced, limpiarFiltros, exportarHistorialFiltrado, exportarCSV, editarGasto, cargarMasHistorial } from './historial.js';
@@ -137,7 +137,11 @@ document.addEventListener('DOMContentLoaded', () => {
       S.currentUserId = session.user.id;
       hideAuth();
       if ($('config-user-email')) $('config-user-email').textContent = session.user.email || '';
-      if (S.allData.length === 0) setTimeout(() => cargarDatos(), 100);
+      if (S.allData.length === 0) setTimeout(async () => {
+        await loadUserProfile();
+        applyRoleUI();
+        cargarDatos();
+      }, 100);
     } else {
       S.currentUserId = null; showAuth();
     }

@@ -44,9 +44,9 @@ function renderABMList(field) {
     }
     return `<div class="flex items-center gap-2 p-3 rounded-lg border" style="border-color:var(--border-solid);background:var(--kpi-bg)">
       <div class="flex-1 min-w-0"><div class="font-medium text-sm truncate" style="color:var(--text)">${escapeHtml(v)}</div><div class="text-xs ${s?'':'italic'}" style="color:var(--text3)">${countText}</div></div>
-      <button data-action="abmRename" data-field="${field}" data-value="${escapeAttr(v)}" class="w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50" title="Renombrar"><i class="fas fa-pen text-xs"></i></button>
-      <button data-action="abmMerge" data-field="${field}" data-value="${escapeAttr(v)}" class="w-8 h-8 flex items-center justify-center rounded-lg text-amber-600 hover:bg-amber-50" title="Fusionar"><i class="fas fa-compress-alt text-xs"></i></button>
-      ${!s ? `<button data-action="abmRemoveCustom" data-field="${field}" data-value="${escapeAttr(v)}" class="w-8 h-8 flex items-center justify-center rounded-lg text-red-600 hover:bg-red-50" title="Eliminar"><i class="fas fa-trash text-xs"></i></button>` : ''}
+      <button data-action="abmRename" data-field="${field}" data-value="${escapeAttr(v)}" class="owner-only w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50" title="Renombrar"><i class="fas fa-pen text-xs"></i></button>
+      <button data-action="abmMerge" data-field="${field}" data-value="${escapeAttr(v)}" class="owner-only w-8 h-8 flex items-center justify-center rounded-lg text-amber-600 hover:bg-amber-50" title="Fusionar"><i class="fas fa-compress-alt text-xs"></i></button>
+      ${!s ? `<button data-action="abmRemoveCustom" data-field="${field}" data-value="${escapeAttr(v)}" class="owner-only w-8 h-8 flex items-center justify-center rounded-lg text-red-600 hover:bg-red-50" title="Eliminar"><i class="fas fa-trash text-xs"></i></button>` : ''}
     </div>`;
   }).join('');
   if (field === 'Metodo') updateMetodoSelect();

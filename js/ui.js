@@ -75,6 +75,8 @@ export function toggleDarkMode() {
 
 /* ── Tabs ── */
 export function showTab(tab) {
+  // Viewers no pueden acceder a la tab de carga
+  if (tab === 'carga' && S.userRole === 'viewer') tab = 'historial';
   if (S.currentTab === 'carga' && tab !== 'carga' && S.formDirty) {
     const hasContent = ($('concepto')?.value || '').trim() || ($('importe')?.value || '').trim();
     if (hasContent && !confirm('Tenés cambios sin guardar en el formulario. ¿Salir igual?')) return;

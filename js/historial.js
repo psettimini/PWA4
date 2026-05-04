@@ -37,7 +37,7 @@ export function renderHistorial() {
     const isNeg = g.Importe < 0, impColor = isNeg ? 'text-red-500' : '';
     const moneda = g.Moneda || 'ARS';
     const monedaTag = moneda === 'USD' ? ' <span class="ml-1 text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full font-bold">U$S</span>' : '';
-    return `<tr class="hover:bg-slate-50"><td class="py-3 px-4">${escapeHtml(g.Fecha)||'-'}</td><td class="py-3 px-4 font-medium">${escapeHtml(g.Centro)}</td><td class="py-3 px-4">${escapeHtml(g.Concepto)}${monedaTag}${g._pending?' <span class="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Pendiente</span>':''}</td><td class="py-3 px-4"><span class="px-2 py-1 rounded text-xs ${g.Tipo==='F'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'}">${escapeHtml(g.Tipo)}</span></td><td class="py-3 px-4 text-xs text-slate-500">${escapeHtml(g.Metodo)}</td><td class="py-3 px-4 text-right font-mono ${impColor}">${formatImporteSigned(g.Importe, moneda)}</td><td class="py-3 px-4 text-center"><button data-action="editarGasto" data-id="${escapeAttr(g.ID)}" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button><button data-action="borrarGasto" data-id="${escapeAttr(g.ID)}" data-concepto="${escapeAttr(g.Concepto)}" class="text-red-600"><i class="fas fa-trash"></i></button></td></tr>`;
+    return `<tr class="hover:bg-slate-50"><td class="py-3 px-4">${escapeHtml(g.Fecha)||'-'}</td><td class="py-3 px-4 font-medium">${escapeHtml(g.Centro)}</td><td class="py-3 px-4">${escapeHtml(g.Concepto)}${monedaTag}${g._pending?' <span class="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Pendiente</span>':''}</td><td class="py-3 px-4"><span class="px-2 py-1 rounded text-xs ${g.Tipo==='F'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'}">${escapeHtml(g.Tipo)}</span></td><td class="py-3 px-4 text-xs text-slate-500">${escapeHtml(g.Metodo)}</td><td class="py-3 px-4 text-right font-mono ${impColor}">${formatImporteSigned(g.Importe, moneda)}</td><td class="py-3 px-4 text-center owner-only"><button data-action="editarGasto" data-id="${escapeAttr(g.ID)}" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button><button data-action="borrarGasto" data-id="${escapeAttr(g.ID)}" data-concepto="${escapeAttr(g.Concepto)}" class="text-red-600"><i class="fas fa-trash"></i></button></td></tr>`;
   }).join('');
   if (hasMore) tbody.innerHTML += `<tr><td colspan="7" class="py-4 text-center"><button data-action="cargarMasHistorial" class="px-6 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-200 transition-colors"><i class="fas fa-chevron-down mr-1"></i>Cargar más (${remaining} restantes)</button></td></tr>`;
 
@@ -99,6 +99,7 @@ export function exportarCSV() {
 /* ── Swipe Cards ── */
 const _swipe = { card: null, startX: 0, currentX: 0, threshold: 80, maxSwipe: 120 };
 function initSwipeCards() {
+  if (S.userRole === 'viewer') return; // viewers no editan ni borran
   const mob = $('historial-cards-mobile'); if (!mob || mob._swipeInit) return;
   mob._swipeInit = true;
   mob.addEventListener('touchstart', (e) => {
