@@ -29,6 +29,10 @@ function cuitDestino(desc) {
 /* Movimientos que no representan un gasto real. */
 const RE_NO_GASTO = /CAPITALIZACION|SOL\.?RESC|RESCATE|CTO CV ME|ACREDITACION|DEPOSITO/;
 
+/* Suscripción a un fondo común: sale plata de la cuenta pero es una
+   inversión, la contracara de los rescates. No es un gasto. */
+const RE_INVERSION = /LIQ\.?\s*SUSC|SUSCRIPCION|PLAZO FIJO/;
+
 function esFecha(v) {
   return v instanceof Date || (typeof v === 'number' && v > 20000 && v < 80000);
 }
@@ -91,6 +95,9 @@ export function parseMacroDebito(filas, opts = {}) {
       motivo = tarjeta
         ? `Pago de ${tarjeta} — el detalle viene en el resumen de la tarjeta`
         : 'DEBIN saliente — suele ser un pago de tarjeta';
+    } else if (RE_INVERSION.test(descN)) {
+      estado = 'descartado';
+      motivo = 'Suscripción a un fondo, es una inversión y no un gasto';
     } else if (RE_TRANSF.test(descN) && CUIT_PROPIOS.includes(cuitDestino(desc))) {
       estado = 'descartado';
       motivo = 'Transferencia a una cuenta propia, no es un gasto';
