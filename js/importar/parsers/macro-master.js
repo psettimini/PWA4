@@ -115,5 +115,12 @@ export function parseMacroMaster(filas, opts = {}) {
     }
   }
 
-  return { cierre, movimientos: movs.filter(m => Number.isFinite(m.importe) && m.importe !== 0) };
+  /* Comercios que quedaron sin su línea de importe: el resumen los lista en
+     dos renglones y el segundo no se pudo leer. */
+  const sinImporte = [...pendientes.values()];
+  return {
+    cierre,
+    movimientos: movs.filter(m => Number.isFinite(m.importe) && m.importe !== 0),
+    sinImporte
+  };
 }

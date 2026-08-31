@@ -28,6 +28,7 @@ function limpiarTitulo(s) {
 export function parseUala(lineas, opts = {}) {
   const ref = opts.cierre || new Date().toISOString().slice(0, 10);
   const movs = [];
+  const sinImporte = [];
 
   for (let i = 0; i < lineas.length; i++) {
     const linea = String(lineas[i]).replace(/\s+/g, ' ').trim();
@@ -43,9 +44,9 @@ export function parseUala(lineas, opts = {}) {
     /* La fecha y la categoría están en el renglón siguiente. */
     const sig = String(lineas[i + 1] || '').replace(/\s+/g, ' ').trim();
     const mf = sig.match(RE_FECHA_FIN);
-    if (!mf) continue;
+    if (!mf) { sinImporte.push(linea); continue; }
     const fecha = parseFecha(mf[1], ref);
-    if (!fecha) continue;
+    if (!fecha) { sinImporte.push(linea); continue; }
 
     const categoria = sig.slice(0, mf.index).trim();
     const esIngreso = RE_INGRESO.test(linea) || RE_NO_GASTO.test(normalizarTexto(categoria));
@@ -67,5 +68,5 @@ export function parseUala(lineas, opts = {}) {
     i++;
   }
 
-  return { cierre: ref, movimientos: movs };
+  return { cierre: ref, movimientos: movs, sinImporte };
 }

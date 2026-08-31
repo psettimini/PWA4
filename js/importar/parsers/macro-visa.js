@@ -48,6 +48,7 @@ export function parseMacroVisa(filas, opts = {}) {
   const cierre = detectarCierre(filas) || opts.cierre || null;
   const anclas = detectarAnclas(filas);
   const movs = [];
+  const sinImporte = [];
 
   for (const fila of filas) {
     const texto = fila.texto.replace(/\s+/g, ' ').trim();
@@ -60,7 +61,13 @@ export function parseMacroVisa(filas, opts = {}) {
     if (!fecha) continue;
 
     const imp = elegirImporte(fila, anclas);
-    if (!imp || !Number.isFinite(imp.valor) || imp.valor === 0) continue;
+    if (!imp || !Number.isFinite(imp.valor) || imp.valor === 0) {
+      /* La línea tiene fecha de consumo pero no se le pudo leer el importe.
+         Pasa si el OCR confunde la coma decimal por un punto. Se avisa para
+         que no se pierda en silencio. */
+      if (!RE_DESCARTE.test(normalizarTexto(texto))) sinImporte.push(texto);
+      continue;
+    }
 
     let resto = m[2];
     const corte = resto.lastIndexOf(imp.texto);
@@ -92,5 +99,5 @@ export function parseMacroVisa(filas, opts = {}) {
     });
   }
 
-  return { cierre, movimientos: movs };
+  return { cierre, movimientos: movs, sinImporte };
 }

@@ -3,7 +3,7 @@
    index.js — Archivo → parser → clasificación → dedup → revisión → alta
 ======================================== */
 import { $, S, STORAGE_KEYS, registry } from '../state.js';
-import { safeNumber, evalExpresion, showLoading } from '../utils.js';
+import { evalExpresion, showLoading } from '../utils.js';
 import { toast, toastError, toastWarn, modalConfirm } from '../ui.js';
 import { leerArchivo } from './parsers/fuentes.js';
 import { cargarXlsx } from './parsers/libs.js';
@@ -14,6 +14,7 @@ import { parseMacroDebito } from './parsers/macro-debito.js';
 import { parseUala } from './parsers/uala.js';
 import { clasificar, getMemoria, claveComercio } from './clasificar.js';
 import { anotarDuplicados, cruzarTransferencias } from './dedup.js';
+import { parseImporteFlexible } from './normalizar.js';
 import { commitImportacion } from './commit.js';
 import { renderRevision, renderResumen } from './revision.js';
 
@@ -224,6 +225,7 @@ export async function importarArchivos(files) {
   const forzado = $('import-origen')?.value || '';
   const nuevos = [];
   const origenes = new Set();
+  const sinLeer = [];
 
   try {
     for (let i = 0; i < files.length; i++) {
@@ -235,6 +237,7 @@ export async function importarArchivos(files) {
         () => E.cancelado);
       origenes.add(r.origen);
       nuevos.push(...r.movimientos);
+      if (r.sinImporte?.length) sinLeer.push(...r.sinImporte);
     }
 
     if (E.cancelado) return;   // la pantalla ya volvió al cancelar
@@ -253,6 +256,14 @@ export async function importarArchivos(files) {
     renderRevision(E.movs, E.filtro);
     const nombres = [...origenes].map(o => ORIGENES[o] || o).join(', ');
     toast(`${nuevos.length} movimientos leídos de ${nombres}`);
+
+    /* El reconocimiento de texto puede dejar una línea sin importe legible.
+       Se avisa para que no desaparezca sin que te enteres. */
+    if (sinLeer.length) {
+      console.warn('[Importar] Líneas sin importe legible:', sinLeer);
+      setTimeout(() => toastWarn(
+        `${sinLeer.length} línea${sinLeer.length === 1 ? '' : 's'} sin importe legible: revisá el resumen contra el total`), 1900);
+    }
   } catch (e) {
     toastError(e.message || 'No pude leer el archivo');
     mostrarPaso(E.movs.length ? 'revision' : 'archivo');
@@ -280,8 +291,13 @@ export function toggleFila(id, valor) {
 export function editarCampo(id, campo, valor) {
   const m = buscar(id); if (!m) return;
   if (campo === 'importe') {
-    const v = evalExpresion(valor);
-    m.importe = Number.isFinite(v) ? v : safeNumber(valor);
+    /* Solo se evalúa como expresión si hay un operador entre números
+       ("100+50"). Si no, se parsea como importe: safeNumber rompería un
+       "294.742,14" escrito a mano, dejándolo en 294,74. */
+    const esExpresion = /\d\s*[+*/]|\d\s*-\s*\d/.test(valor);
+    const v = esExpresion ? evalExpresion(valor) : NaN;
+    const parsed = Number.isFinite(v) ? v : parseImporteFlexible(valor);
+    if (Number.isFinite(parsed)) m.importe = parsed;
   } else {
     m[campo] = valor;
   }

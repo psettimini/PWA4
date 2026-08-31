@@ -43,6 +43,35 @@ export function parseImporteAR(raw) {
 }
 
 /* Devuelve todos los importes es-AR presentes en una línea, en orden. */
+/* Parseo tolerante para lo que se escribe a mano en la revisión, donde
+   conviven el formato es-AR ("294.742,14") y el que muestra el campo
+   ("294742.14"). Regla: manda el último separador, y solo es decimal si lo
+   siguen una o dos cifras — en es-AR los miles siempre van de a tres. */
+export function parseImporteFlexible(raw) {
+  if (raw == null) return NaN;
+  let s = String(raw).trim();
+  if (!s) return NaN;
+  let negativo = false;
+  if (/^\(.*\)$/.test(s)) { negativo = true; s = s.slice(1, -1).trim(); }
+  if (s.endsWith('-')) { negativo = true; s = s.slice(0, -1).trim(); }
+  if (s.startsWith('-')) { negativo = true; s = s.slice(1).trim(); }
+  s = s.replace(/[^\d.,]/g, '');
+  if (!s) return NaN;
+
+  const ultimo = Math.max(s.lastIndexOf('.'), s.lastIndexOf(','));
+  let entero = s, decimales = '';
+  if (ultimo >= 0) {
+    const cola = s.slice(ultimo + 1);
+    if (/^\d{1,2}$/.test(cola)) { entero = s.slice(0, ultimo); decimales = cola; }
+  }
+  entero = entero.replace(/[.,]/g, '');
+  if (!entero && !decimales) return NaN;
+
+  const n = parseFloat(`${entero || '0'}.${decimales || '0'}`);
+  if (!Number.isFinite(n)) return NaN;
+  return negativo ? -n : n;
+}
+
 export function importesEnLinea(linea) {
   const out = [];
   for (const m of String(linea ?? '').matchAll(RE_IMPORTE)) {
@@ -121,7 +150,7 @@ export function parseFecha(raw, refISO) {
 export function limpiarComercio(raw) {
   let s = String(raw ?? '').replace(/\s+/g, ' ').trim();
   s = s.replace(/\b\d{8,}\b/g, ' ');            // números de referencia
-  s = s.replace(/\b\d{1,3}[.,]\d{2}\s*(US DOLLAR?S?|USD|EURO?S?)\b/gi, ' ');
+  s = s.replace(/\b[\d.,]+\s*(US DOLLAR?S?|USD|EURO?S?)\b/gi, ' ');
   s = s.replace(/[*]+/g, ' ');
   s = s.replace(/\s*(?:\d{1,3}(?:\.\d{3})*[.,]\d{2})\s*$/, ' '); // importe de origen al final
   s = s.replace(/\s{2,}/g, ' ').trim();
