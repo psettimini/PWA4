@@ -11,8 +11,10 @@ import { RE_IMPORTE, parseImporteAR } from '../normalizar.js';
 export function importesPosicionados(fila) {
   const out = [];
   for (const p of fila.palabras || []) {
+    /* Macro escribe el signo al final ("4,40-") y BBVA adelante
+       ("-1.000.000,00"): se aceptan las dos formas. */
     const limpio = String(p.texto).replace(/^[(]|[)]$/g, '');
-    if (!new RegExp(`^${RE_IMPORTE.source}$`).test(limpio)) continue;
+    if (!new RegExp(`^-?${RE_IMPORTE.source}$`).test(limpio)) continue;
     const valor = parseImporteAR(limpio);
     if (!Number.isFinite(valor)) continue;
     out.push({ valor, texto: p.texto, x1: p.x1, centro: p.centro });

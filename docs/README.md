@@ -1,6 +1,6 @@
 # Gestión de Gastos — Documentación Técnica
 
-**Versión:** 2.5.6  
+**Versión:** 2.6.0  
 **Repositorio:** `psettimini/PWA4` (branch `main`)  
 **Hosting:** GitHub Pages  
 **Última actualización:** Agosto 2026

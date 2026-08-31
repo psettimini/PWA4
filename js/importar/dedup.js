@@ -93,15 +93,15 @@ export function anotarDuplicados(movs, allData, tolerancia = TOLERANCIA_DIAS) {
 }
 
 /* Cruce entre orígenes del mismo lote: si una transferencia que sale de
-   Macro aparece como transferencia recibida en Ualá, es plata movida entre
-   cuentas propias y no un gasto. Cubre los destinos cuyo CUIT no figura en
+   Macro o de BBVA aparece como transferencia recibida en Ualá, es plata
+   movida entre cuentas propias y no un gasto. Cubre los destinos cuyo CUIT no figura en
    la lista de cuentas propias del parser. */
 export function cruzarTransferencias(movs, tolerancia = TOLERANCIA_DIAS) {
   const recibidas = movs.filter(m => m.origen === 'uala' && /recibida/i.test(m.categoriaOrigen || ''));
   if (!recibidas.length) return movs;
 
   for (const m of movs) {
-    if (m.origen !== 'macro-debito' || m.estado === 'descartado') continue;
+    if (!['macro-debito', 'bbva-cuenta'].includes(m.origen) || m.estado === 'descartado') continue;
     if (!/^TRANSF/i.test(m.conceptoOrigen || '')) continue;
     const par = recibidas.find(u => {
       const d = diffDias(m.fecha, u.fecha);

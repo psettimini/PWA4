@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'gastos-pwa-v2.5.6';
+const CACHE_VERSION = 'gastos-pwa-v2.6.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const CDN_CACHE = `${CACHE_VERSION}-cdn`;
@@ -33,6 +33,8 @@ const APP_SHELL = [
   'js/importar/parsers/macro-master.js',
   'js/importar/parsers/macro-debito.js',
   'js/importar/parsers/uala.js',
+  'js/importar/parsers/bbva-tarjeta.js',
+  'js/importar/parsers/bbva-cuenta.js',
   'icon-192.png',
   'icon-512.png',
   'apple-touch-icon.png'

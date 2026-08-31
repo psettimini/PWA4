@@ -4,34 +4,53 @@
 ======================================== */
 import { cargarPdfJs, cargarTesseract } from './libs.js';
 
-/* Reconstruye líneas a partir de los ítems de texto de pdf.js:
-   agrupa por coordenada Y y ordena por X, insertando espacios donde el
-   salto horizontal es grande (así se preservan las columnas). */
-function itemsALineas(items) {
-  const filas = new Map();
+/* Reconstruye filas a partir de los ítems de texto de pdf.js: agrupa por
+   coordenada Y y ordena por X, insertando espacios donde el salto
+   horizontal es grande (así se preservan las columnas). Conserva la
+   posición de cada palabra: los resúmenes de BBVA separan pesos de dólares
+   —y el débito separa el saldo del importe— sólo por columna. */
+function itemsAFilas(items, tolerancia = 4) {
+  const sueltos = [];
   for (const it of items) {
     const txt = it.str;
     if (!txt || !txt.trim()) continue;
-    const y = Math.round(it.transform[5]);
-    const x = it.transform[4];
-    const clave = Math.round(y / 3) * 3;
-    if (!filas.has(clave)) filas.set(clave, []);
-    filas.get(clave).push({ x, txt, w: it.width || 0 });
+    sueltos.push({ y: it.transform[5], x: it.transform[4], txt, w: it.width || 0 });
   }
-  const ordenadas = [...filas.entries()].sort((a, b) => b[0] - a[0]);
-  return ordenadas.map(([, cols]) => {
-    cols.sort((a, b) => a.x - b.x);
-    let linea = '', finAnterior = null;
-    for (const c of cols) {
+  /* Se agrupa por cercanía y no por un bucket fijo: BBVA imprime el importe
+     con uno o dos puntos de diferencia respecto de su descripción, y un
+     redondeo los separaba en dos filas distintas. */
+  sueltos.sort((a, b) => b.y - a.y);
+  const grupos = [];
+  for (const it of sueltos) {
+    const ult = grupos[grupos.length - 1];
+    if (ult && Math.abs(ult.y - it.y) <= tolerancia) ult.cols.push(it);
+    else grupos.push({ y: it.y, cols: [it] });
+  }
+
+  return grupos.map((fila) => {
+    fila.cols.sort((a, b) => a.x - b.x);
+    let texto = '', finAnterior = null;
+    const palabras = [];
+    for (const c of fila.cols) {
       if (finAnterior !== null) {
         const hueco = c.x - finAnterior;
-        linea += hueco > 8 ? '   ' : (hueco > 1 ? ' ' : '');
+        texto += hueco > 8 ? '   ' : (hueco > 1 ? ' ' : '');
       }
-      linea += c.txt;
+      texto += c.txt;
       finAnterior = c.x + c.w;
+      /* Un ítem puede traer varias palabras juntas: se reparte el ancho
+         proporcionalmente para ubicar cada una. */
+      let off = 0;
+      for (const parte of c.txt.split(/(\s+)/)) {
+        const ancho = c.txt.length ? (parte.length / c.txt.length) * c.w : 0;
+        if (parte.trim()) {
+          palabras.push({ texto: parte, x0: c.x + off, x1: c.x + off + ancho, centro: c.x + off + ancho / 2 });
+        }
+        off += ancho;
+      }
     }
-    return linea.trim();
-  }).filter(Boolean);
+    return { texto: texto.trim(), palabras, y: Math.round(fila.y) };
+  }).filter(f => f.texto);
 }
 
 /* Devuelve { lineas, paginas, tieneTexto }. Si el PDF no trae capa de texto
@@ -40,16 +59,16 @@ function itemsALineas(items) {
 export async function leerPdf(arrayBuffer) {
   const pdfjsLib = await cargarPdfJs();
   const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-  const lineas = [];
+  const filas = [];
   let chars = 0;
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
-    const ls = itemsALineas(content.items);
-    for (const l of ls) chars += l.length;
-    lineas.push(...ls);
+    const fs = itemsAFilas(content.items);
+    for (const f of fs) chars += f.texto.length;
+    filas.push(...fs);
   }
-  return { doc, lineas, paginas: doc.numPages, tieneTexto: chars > 200 };
+  return { doc, filas, lineas: filas.map(f => f.texto), paginas: doc.numPages, tieneTexto: chars > 200 };
 }
 
 /* Renderiza una página del PDF a canvas. La escala apunta a ~400 dpi
@@ -122,8 +141,8 @@ export async function leerArchivo(file, onEstado, cancelado = () => false) {
   if (nombre.endsWith('.pdf')) {
     onEstado?.('Leyendo PDF…', 0);
     const buf = await file.arrayBuffer();
-    const { doc, lineas, paginas, tieneTexto } = await leerPdf(buf);
-    if (tieneTexto) return { lineas, filas: lineas.map(t => ({ texto: t, palabras: [] })), via: 'texto' };
+    const { doc, lineas, filas, paginas, tieneTexto } = await leerPdf(buf);
+    if (tieneTexto) return { lineas, filas, via: 'texto' };
 
     const todas = [];
     for (let i = 1; i <= paginas; i++) {

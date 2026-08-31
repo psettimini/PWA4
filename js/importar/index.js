@@ -12,6 +12,8 @@ import { parseMacroVisa } from './parsers/macro-visa.js';
 import { parseMacroMaster } from './parsers/macro-master.js';
 import { parseMacroDebito } from './parsers/macro-debito.js';
 import { parseUala } from './parsers/uala.js';
+import { parseBbvaTarjeta } from './parsers/bbva-tarjeta.js';
+import { parseBbvaCuenta } from './parsers/bbva-cuenta.js';
 import { clasificar, getMemoria, claveComercio } from './clasificar.js';
 import { anotarDuplicados, cruzarTransferencias } from './dedup.js';
 import { parseImporteFlexible, formatImporteEdit } from './normalizar.js';
@@ -30,6 +32,9 @@ export const ORIGENES = {
   'macro-visa': 'VISA Macro',
   'macro-master': 'Master Macro',
   'macro-debito': 'Débito Macro',
+  'bbva-visa': 'VISA BBVA',
+  'bbva-master': 'Master BBVA',
+  'bbva-cuenta': 'Caja de ahorros BBVA',
   uala: 'Ualá'
 };
 
@@ -39,6 +44,15 @@ export function detectarOrigen(nombre, lineas) {
   if (/\.xlsx?$/.test(n)) return 'macro-debito';
 
   const txt = lineas.slice(0, 60).join(' ').toUpperCase();
+
+  /* BBVA primero: sus resúmenes de tarjeta dicen "Visa Signature", que si no
+     se confundiría con el de Macro. */
+  if (/BBVA/.test(txt)) {
+    if (/CAJA DE AHORRO|MOVIMIENTOS EN CUENTAS|CUENTAS Y PAQUETES/.test(txt)) return 'bbva-cuenta';
+    if (/MASTERCARD/.test(txt)) return 'bbva-master';
+    if (/VISA/.test(txt)) return 'bbva-visa';
+  }
+
   if (/AMERICAN EXPRESS|PLATINUM CARD|ESTADO DE CUENTA/.test(txt)) return 'amex';
   if (/MASTERCARD|MARCA TARJETA/.test(txt)) return 'macro-master';
   if (/SALDO ANTERIOR|TOTAL CONSUMOS|SIGNATURE|MONSERRAT/.test(txt)) return 'macro-visa';
@@ -53,6 +67,9 @@ function ejecutarParser(origen, lineas, filas, opts) {
     case 'macro-visa': return parseMacroVisa(filas, opts);
     case 'macro-master': return parseMacroMaster(filas, opts);
     case 'uala': return parseUala(lineas, opts);
+    case 'bbva-visa': return parseBbvaTarjeta(filas, { ...opts, marca: 'visa' });
+    case 'bbva-master': return parseBbvaTarjeta(filas, { ...opts, marca: 'master' });
+    case 'bbva-cuenta': return parseBbvaCuenta(filas, opts);
     default: throw new Error(`Origen no soportado: ${origen}`);
   }
 }
