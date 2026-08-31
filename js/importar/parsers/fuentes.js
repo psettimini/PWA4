@@ -116,7 +116,7 @@ export async function ocr(fuente, onProgreso) {
 
 /* Extrae líneas de cualquier archivo soportado.
    onEstado(texto, progreso) informa el avance para la UI. */
-export async function leerArchivo(file, onEstado) {
+export async function leerArchivo(file, onEstado, cancelado = () => false) {
   const nombre = (file.name || '').toLowerCase();
 
   if (nombre.endsWith('.pdf')) {
@@ -127,6 +127,7 @@ export async function leerArchivo(file, onEstado) {
 
     const todas = [];
     for (let i = 1; i <= paginas; i++) {
+      if (cancelado()) break;
       onEstado?.(`Reconociendo texto (página ${i} de ${paginas})…`, (i - 1) / paginas);
       const canvas = await renderizarPagina(doc, i);
       const r = await ocr(canvas, p => onEstado?.(

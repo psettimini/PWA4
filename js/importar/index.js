@@ -17,7 +17,11 @@ import { anotarDuplicados, cruzarTransferencias } from './dedup.js';
 import { commitImportacion } from './commit.js';
 import { renderRevision, renderResumen } from './revision.js';
 
-const E = { movs: [], filtro: 'todos', trabajando: false };
+const E = { movs: [], filtro: 'todos', trabajando: false, cancelado: false };
+
+/* Un borrador viejo casi siempre es basura de una sesión que quedó a
+   medias, no trabajo que quieras retomar. */
+const BORRADOR_VENCE_HS = 24;
 let seq = 0;
 
 export const ORIGENES = {
@@ -53,7 +57,7 @@ function ejecutarParser(origen, lineas, filas, opts) {
 }
 
 /* ── Lectura de un archivo ── */
-async function procesarArchivo(file, origenForzado, onEstado) {
+async function procesarArchivo(file, origenForzado, onEstado, cancelado = () => false) {
   const nombre = (file.name || '').toLowerCase();
   const centros = [...new Set(S.allData.map(g => g.Centro).filter(Boolean))];
 
@@ -66,7 +70,7 @@ async function procesarArchivo(file, origenForzado, onEstado) {
     return { origen: 'macro-debito', ...parseMacroDebito(filas, { centros }) };
   }
 
-  const { lineas, filas } = await leerArchivo(file, onEstado);
+  const { lineas, filas } = await leerArchivo(file, onEstado, cancelado);
   const origen = origenForzado || detectarOrigen(file.name, lineas);
   if (!origen) throw new Error(`No pude reconocer el origen de "${file.name}". Elegilo a mano y volvé a intentar.`);
   return { origen, ...ejecutarParser(origen, lineas, filas, { centros }) };
@@ -145,6 +149,7 @@ function restaurarBorrador() {
   try {
     const d = JSON.parse(localStorage.getItem(STORAGE_KEYS.importDraft) || 'null');
     if (!d?.movs?.length) return false;
+    if (d.ts && (Date.now() - d.ts) > BORRADOR_VENCE_HS * 3600000) { limpiarBorrador(); return false; }
     E.movs = anotarDuplicadosPreservando(d.movs);
     seq = Math.max(seq, d.movs.length);
     return true;
@@ -183,6 +188,28 @@ export function abrirImportador() {
   else mostrarPaso('archivo');
 }
 
+/* Vuelve a la pantalla de archivos conservando lo ya revisado, para poder
+   sumar otro resumen al mismo lote. */
+export function volverAArchivo() {
+  mostrarPaso('archivo');
+  const inp = $('import-file'); if (inp) inp.value = '';
+}
+
+/* Corta una lectura en curso. El OCR no se puede abortar a mitad de página,
+   así que se descarta el resultado al terminar la que esté procesando. */
+export function cancelarLectura() {
+  const volver = () => {
+    mostrarPaso(E.movs.length ? 'revision' : 'archivo');
+    if (E.movs.length) renderRevision(E.movs, E.filtro);
+  };
+  if (!E.trabajando) { volver(); return; }
+  /* La página que ya está en el OCR no se puede abortar, pero no tiene
+     sentido hacer esperar: se devuelve la pantalla y el resultado se tira. */
+  E.cancelado = true;
+  volver();
+  toast('Lectura cancelada');
+}
+
 export async function cerrarImportador() {
   if (E.movs.some(m => m.incluir) && !await modalConfirm('Tenés filas marcadas sin importar. El borrador queda guardado. ¿Cerrar igual?')) return;
   $('import-overlay')?.classList.add('hidden');
@@ -192,6 +219,7 @@ export async function cerrarImportador() {
 export async function importarArchivos(files) {
   if (!files?.length || E.trabajando) return;
   E.trabajando = true;
+  E.cancelado = false;
   mostrarPaso('progreso');
   const forzado = $('import-origen')?.value || '';
   const nuevos = [];
@@ -199,17 +227,22 @@ export async function importarArchivos(files) {
 
   try {
     for (let i = 0; i < files.length; i++) {
+      if (E.cancelado) break;
       const file = files[i];
       const pref = files.length > 1 ? `(${i + 1}/${files.length}) ` : '';
       const r = await procesarArchivo(file, forzado || null,
-        (txt, v) => progreso(pref + txt, ((i + (v ?? 0)) / files.length)));
+        (txt, v) => progreso(pref + txt, ((i + (v ?? 0)) / files.length)),
+        () => E.cancelado);
       origenes.add(r.origen);
       nuevos.push(...r.movimientos);
     }
 
+    if (E.cancelado) return;   // la pantalla ya volvió al cancelar
+
     if (!nuevos.length) {
       toastWarn('No encontré movimientos en el archivo');
-      mostrarPaso('archivo');
+      mostrarPaso(E.movs.length ? 'revision' : 'archivo');
+      if (E.movs.length) renderRevision(E.movs, E.filtro);
       return;
     }
 
@@ -226,6 +259,7 @@ export async function importarArchivos(files) {
     if (E.movs.length) renderRevision(E.movs, E.filtro);
   } finally {
     E.trabajando = false;
+    E.cancelado = false;
     const inp = $('import-file'); if (inp) inp.value = '';
   }
 }
@@ -305,7 +339,9 @@ export async function aprobarImportacion() {
 export async function descartarTodo() {
   if (!await modalConfirm('¿Descartar toda la importación en curso?')) return;
   E.movs = [];
+  E.filtro = 'todos';
   limpiarBorrador();
+  renderRevision(E.movs, E.filtro);   // evita que quede el listado viejo en el DOM
   mostrarPaso('archivo');
   toast('Importación descartada');
 }

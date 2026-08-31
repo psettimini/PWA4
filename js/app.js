@@ -12,7 +12,7 @@ import { renderHistorial, filtrarHistorial, filtrarHistorialDebounced, limpiarFi
 import { renderDashboard, renderEvolucionCentro, renderEvolucionConcepto } from './dashboard.js';
 import { initComparar, renderComparar } from './comparar.js';
 import { renderABM, updateMetodoSelect, abmAdd, abmRename, abmMerge, abmRemoveCustom } from './abm.js';
-import { abrirImportador, cerrarImportador, aprobarImportacion, descartarTodo, setFiltro, descartarFila, restaurarFila, initImportador } from './importar/index.js';
+import { abrirImportador, cerrarImportador, aprobarImportacion, descartarTodo, setFiltro, descartarFila, restaurarFila, volverAArchivo, cancelarLectura, initImportador } from './importar/index.js';
 
 /* ── Populate Registry (breaks circular dependencies) ── */
 registry.cargarDatos = cargarDatos;
@@ -76,6 +76,8 @@ const clickActions = {
   importFiltro: (d) => setFiltro(d.filtro),
   importDescartar: (d) => descartarFila(d.fid),
   importRestaurar: (d) => restaurarFila(d.fid),
+  volverAArchivo: () => volverAArchivo(),
+  cancelarLectura: () => cancelarLectura(),
   /* PWA */
   reload: () => location.reload(),
   dismissUpdateBanner: () => dismissUpdateBanner(),
