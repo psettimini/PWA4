@@ -87,9 +87,18 @@ function puntajePatron(origen, patron) {
   const ta = tokens(a), tb = tokens(b);
   if (!ta.length || !tb.length) return 0;
   const setB = new Set(tb);
-  const comunes = ta.filter(t => setB.has(t)).length;
-  if (!comunes) return 0;
-  return Math.round((comunes / Math.min(ta.length, tb.length)) * 55);
+  const comunes = ta.filter(t => setB.has(t));
+  if (!comunes.length) return 0;
+
+  /* Se pondera por cuántos caracteres se comparten sobre el texto más
+     largo, no por cantidad de palabras. Si no, una palabra genérica basta:
+     "Casa Zuliani" matcheaba con "Casa Rio" porque sólo quedaba "CASA"
+     ("RIO" se filtra por corto) y el puntaje daba 100%. */
+  const chars = t => t.replace(/[^A-Z0-9]/g, '').length;
+  const compartidos = comunes.reduce((n, t) => n + t.length, 0);
+  const total = Math.max(chars(a), chars(b));
+  if (!total) return 0;
+  return Math.round((compartidos / total) * 70);
 }
 
 /* Devuelve la clasificación propuesta para un movimiento.
