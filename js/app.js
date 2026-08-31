@@ -12,6 +12,7 @@ import { renderHistorial, filtrarHistorial, filtrarHistorialDebounced, limpiarFi
 import { renderDashboard, renderEvolucionCentro, renderEvolucionConcepto } from './dashboard.js';
 import { initComparar, renderComparar } from './comparar.js';
 import { renderABM, updateMetodoSelect, abmAdd, abmRename, abmMerge, abmRemoveCustom } from './abm.js';
+import { abrirImportador, cerrarImportador, aprobarImportacion, descartarTodo, setFiltro, descartarFila, restaurarFila, initImportador } from './importar/index.js';
 
 /* ── Populate Registry (breaks circular dependencies) ── */
 registry.cargarDatos = cargarDatos;
@@ -67,6 +68,14 @@ const clickActions = {
   abmRename: (d) => abmRename(d.field, d.value),
   abmMerge: (d) => abmMerge(d.field, d.value),
   abmRemoveCustom: (d) => abmRemoveCustom(d.field, d.value),
+  /* Importar */
+  abrirImportador: () => abrirImportador(),
+  cerrarImportador: () => cerrarImportador(),
+  aprobarImportacion: () => aprobarImportacion(),
+  descartarImportacion: () => descartarTodo(),
+  importFiltro: (d) => setFiltro(d.filtro),
+  importDescartar: (d) => descartarFila(d.fid),
+  importRestaurar: (d) => restaurarFila(d.fid),
   /* PWA */
   reload: () => location.reload(),
   dismissUpdateBanner: () => dismissUpdateBanner(),
@@ -170,6 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* Importe: evaluar expresión aritmética al perder foco (ej: 100+50 → 150) */
   $('importe')?.addEventListener('blur', evaluarImporteOnBlur);
+
+  initImportador();
 
   /* Form submit prevention */
   document.querySelector('#section-carga form')?.addEventListener('submit', e => e.preventDefault());

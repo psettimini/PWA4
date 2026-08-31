@@ -1,0 +1,7 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Extractos bancarios de muestra (datos sensibles, no publicar).
+# Anclado a la raíz: js/importar/ es código y sí va al repo.
+/importar/

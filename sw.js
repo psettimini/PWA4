@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'gastos-pwa-v2.4.3';
+const CACHE_VERSION = 'gastos-pwa-v2.5.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const CDN_CACHE = `${CACHE_VERSION}-cdn`;
@@ -19,6 +19,20 @@ const APP_SHELL = [
   'js/comparar.js',
   'js/abm.js',
   'js/app.js',
+  'js/importar/index.js',
+  'js/importar/normalizar.js',
+  'js/importar/dedup.js',
+  'js/importar/clasificar.js',
+  'js/importar/revision.js',
+  'js/importar/commit.js',
+  'js/importar/parsers/libs.js',
+  'js/importar/parsers/fuentes.js',
+  'js/importar/parsers/columnas.js',
+  'js/importar/parsers/amex.js',
+  'js/importar/parsers/macro-visa.js',
+  'js/importar/parsers/macro-master.js',
+  'js/importar/parsers/macro-debito.js',
+  'js/importar/parsers/uala.js',
   'icon-192.png',
   'icon-512.png',
   'apple-touch-icon.png'
