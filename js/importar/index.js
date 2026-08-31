@@ -14,7 +14,7 @@ import { parseMacroDebito } from './parsers/macro-debito.js';
 import { parseUala } from './parsers/uala.js';
 import { clasificar, getMemoria, claveComercio } from './clasificar.js';
 import { anotarDuplicados, cruzarTransferencias } from './dedup.js';
-import { parseImporteFlexible } from './normalizar.js';
+import { parseImporteFlexible, formatImporteEdit } from './normalizar.js';
 import { commitImportacion } from './commit.js';
 import { renderRevision, renderResumen } from './revision.js';
 
@@ -302,6 +302,18 @@ export function editarCampo(id, campo, valor) {
     m[campo] = valor;
   }
   if (campo === 'centro' && valor) m.confianza = 'alta';
+
+  /* El importe también se muestra grande a la derecha de la fila: si no se
+     actualiza, queda contradiciendo lo que acabás de escribir. */
+  if (campo === 'importe' || campo === 'moneda') {
+    const head = document.querySelector(`.imp-fila[data-fid="${id}"] .imp-head-imp`);
+    if (head) {
+      const usd = m.moneda === 'USD';
+      head.textContent = `${usd ? 'U$S ' : '$'}${formatImporteEdit(m.importe)}`;
+      head.classList.toggle('imp-usd', usd);
+    }
+  }
+
   guardarBorrador();
   renderResumen(E.movs, E.filtro);
 }
@@ -376,6 +388,15 @@ export function initImportador() {
     else editarCampo(fid, imp, el.value);
   };
   cont.addEventListener('change', onEdit);
+  /* Al salir del campo se reescribe en es-AR canónico. Se toma el valor del
+     modelo, que ya resolvió el texto tipeado: reparsearlo acá rompería las
+     expresiones aritméticas ("60000+7711.6" no es un importe). */
+  cont.addEventListener('blur', (e) => {
+    const el = e.target.closest('[data-imp="importe"]');
+    if (!el) return;
+    const m = buscar(el.dataset.fid);
+    if (m && Number.isFinite(m.importe)) el.value = formatImporteEdit(m.importe);
+  }, true);
   cont.addEventListener('input', (e) => {
     const el = e.target.closest('[data-imp]');
     if (el && el.tagName === 'INPUT' && el.type === 'text') onEdit(e);

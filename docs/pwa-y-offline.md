@@ -9,7 +9,7 @@
 ### Versionado
 
 ```javascript
-const CACHE_VERSION = 'gastos-pwa-v2.5.3';
+const CACHE_VERSION = 'gastos-pwa-v2.5.4';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;   // Assets de App Shell
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;  // Respuestas dinámicas
 ```

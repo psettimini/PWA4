@@ -3,7 +3,8 @@
    revision.js — Render y edición de las filas propuestas
 ======================================== */
 import { $, S } from '../state.js';
-import { escapeHtml, escapeAttr, formatImporteSigned, formatFechaCorta, uniqueSorted } from '../utils.js';
+import { escapeHtml, escapeAttr, formatFechaCorta, uniqueSorted } from '../utils.js';
+import { formatImporteEdit } from './normalizar.js';
 
 const CHIP = {
   nuevo: '<span class="imp-chip imp-chip-nuevo">Nuevo</span>',
@@ -57,7 +58,7 @@ function renderFila(m) {
       <span class="imp-origen" title="Texto del extracto">${escapeHtml(m.conceptoOrigen)}</span>
       ${m.truncado ? '<span class="imp-trunc" title="La app de Ualá cortó el nombre">cortado</span>' : ''}
     </div>
-    <div class="imp-head-imp${monedaUSD ? ' imp-usd' : ''}">${formatImporteSigned(m.importe, m.moneda)}</div>
+    <div class="imp-head-imp${monedaUSD ? ' imp-usd' : ''}">${monedaUSD ? 'U$S ' : '$'}${formatImporteEdit(m.importe)}</div>
   </div>
   ${desc ? `<div class="imp-motivo">${escapeHtml(m.motivoDescarte || 'Descartado')} · <button type="button" data-action="importRestaurar" data-fid="${escapeAttr(m.id)}" class="imp-link">Importar igual</button></div>` : `
   <div class="imp-campos">
@@ -72,7 +73,7 @@ function renderFila(m) {
     <label class="imp-campo imp-campo-metodo"><span>Método</span>
       <select data-imp="metodo" data-fid="${escapeAttr(m.id)}">${opcionesMetodo(m.metodo)}</select></label>
     <label class="imp-campo imp-campo-importe"><span>Importe</span>
-      <input type="text" inputmode="decimal" data-imp="importe" data-fid="${escapeAttr(m.id)}" value="${escapeAttr(m.importe)}"></label>
+      <input type="text" inputmode="decimal" data-imp="importe" data-fid="${escapeAttr(m.id)}" value="${escapeAttr(formatImporteEdit(m.importe))}"></label>
     <label class="imp-campo imp-campo-moneda"><span>Moneda</span>
       <select data-imp="moneda" data-fid="${escapeAttr(m.id)}"><option value="ARS"${!monedaUSD ? ' selected' : ''}>ARS</option><option value="USD"${monedaUSD ? ' selected' : ''}>USD</option></select></label>
     <button type="button" class="imp-descartar" data-action="importDescartar" data-fid="${escapeAttr(m.id)}" title="Descartar esta fila"><i class="fas fa-ban"></i></button>
@@ -122,7 +123,7 @@ export function renderResumen(movs, filtro) {
   const f = $('import-filtros'); if (f) f.innerHTML = chips;
 
   const tot = Object.entries(totales)
-    .map(([mon, v]) => `<span class="imp-total${mon === 'USD' ? ' imp-usd' : ''}">${formatImporteSigned(v, mon)}</span>`)
+    .map(([mon, v]) => `<span class="imp-total${mon === 'USD' ? ' imp-usd' : ''}">${mon === 'USD' ? 'U$S ' : '$'}${formatImporteEdit(v)}</span>`)
     .join('');
   const r = $('import-resumen');
   if (r) {

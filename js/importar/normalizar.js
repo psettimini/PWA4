@@ -165,3 +165,11 @@ export function diffDias(isoA, isoB) {
   if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
   return Math.round((a - b) / 86400000);
 }
+
+/* Importe en es-AR con centavos, para mostrar en la revisión: así se
+   compara de un vistazo contra el resumen impreso. */
+export function formatImporteEdit(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return '';
+  return v.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
