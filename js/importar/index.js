@@ -312,9 +312,11 @@ export async function aprobarImportacion() {
   const marcados = E.movs.filter(m => m.incluir);
   if (!marcados.length) { toastWarn('No hay filas marcadas'); return; }
   const dups = marcados.filter(m => m.estado === 'duplicado').length;
+  const n = marcados.length;
+  const gastos = `${n} gasto${n === 1 ? '' : 's'}`;
   const aviso = dups
-    ? `Vas a importar ${marcados.length} gastos, ${dups} marcados como posible duplicado. ¿Confirmás?`
-    : `Vas a importar ${marcados.length} gastos. ¿Confirmás?`;
+    ? `Vas a importar ${gastos}, ${dups} marcado${dups === 1 ? '' : 's'} como posible duplicado. ¿Confirmás?`
+    : `Vas a importar ${gastos}. ¿Confirmás?`;
   if (!await modalConfirm(aviso)) return;
 
   showLoading(true);

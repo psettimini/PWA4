@@ -27,7 +27,7 @@ export const S = {
 };
 
 export const HISTORIAL_PAGE_SIZE = 50;
-export const APP_VERSION = '2.5.1';
+export const APP_VERSION = '2.5.2';
 export const MONEDAS = ['ARS', 'USD'];
 export const MONEDA_DEFAULT = 'ARS';
 export const STORAGE_KEYS = {

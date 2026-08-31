@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'gastos-pwa-v2.5.1';
+const CACHE_VERSION = 'gastos-pwa-v2.5.2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const CDN_CACHE = `${CACHE_VERSION}-cdn`;
