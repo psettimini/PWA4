@@ -22,8 +22,19 @@ export function setMemoria(mem) {
   try { localStorage.setItem(MEMORIA_KEY, JSON.stringify(mem)); } catch {}
 }
 
+/* En los movimientos de la cuenta Macro el destinatario se identifica por
+   su CUIT, y el sufijo que lo acompaña varía para un mismo pago
+   ("30712180125 VAR" y "30712180125 EXP" son las dos expensas de Dolfines).
+   Por eso la clave se arma con el CUIT y no con el texto completo, que
+   además pierde el CUIT al limpiarse por tener más de 8 dígitos. */
+const RE_CUIT_MOV = /^(TRANSF|DEBIN|EGRESO)\b.*?(\d{11})/;
+
 /* Clave estable del comercio: sin acentos, sin números de referencia. */
 export function claveComercio(textoOrigen) {
+  const norm = normalizarTexto(textoOrigen);
+  const conCuit = norm.match(RE_CUIT_MOV);
+  if (conCuit) return `${conCuit[1]}:${conCuit[2]}`;
+
   const base = normalizarTexto(limpiarComercio(textoOrigen))
     .replace(/[^A-Z0-9 ]+/g, ' ')
     .replace(/\s+/g, ' ')
@@ -85,7 +96,11 @@ function puntajePatron(origen, patron) {
    Orden: memoria aprendida → impuestos → patrones existentes → fallback. */
 export function clasificar(mov, patrones = [], opts = {}) {
   const origen = mov.conceptoOrigen || '';
-  const conceptoLimpio = limpiarComercio(origen) || origen;
+  /* En los movimientos con CUIT se conserva el texto crudo: el CUIT es lo
+     único que identifica al destinatario y limpiarComercio lo borraría. */
+  const conceptoLimpio = RE_CUIT_MOV.test(normalizarTexto(origen))
+    ? origen.replace(/\s+/g, ' ').trim()
+    : (limpiarComercio(origen) || origen);
 
   const mem = opts.memoria || getMemoria();
   const k = claveComercio(origen);

@@ -12,8 +12,8 @@ import { parseMacroVisa } from './parsers/macro-visa.js';
 import { parseMacroMaster } from './parsers/macro-master.js';
 import { parseMacroDebito } from './parsers/macro-debito.js';
 import { parseUala } from './parsers/uala.js';
-import { clasificar, getMemoria } from './clasificar.js';
-import { anotarDuplicados } from './dedup.js';
+import { clasificar, getMemoria, claveComercio } from './clasificar.js';
+import { anotarDuplicados, cruzarTransferencias } from './dedup.js';
 import { commitImportacion } from './commit.js';
 import { renderRevision, renderResumen } from './revision.js';
 
@@ -100,7 +100,28 @@ function preparar(movs) {
     m.confianza = 'media';
     m.fuente = 'duplicado';
   }
-  return movs;
+
+  /* Lo resuelto por CUIT se propaga dentro del lote: si una transferencia
+     matcheó un gasto ya cargado, las demás al mismo CUIT heredan esa
+     clasificación aunque no tengan duplicado propio. */
+  const porCuit = new Map();
+  for (const m of movs) {
+    if (m.fuente !== 'duplicado' && m.fuente !== 'memoria') continue;
+    const k = claveComercio(m.conceptoOrigen);
+    if (k && !porCuit.has(k)) porCuit.set(k, { centro: m.centro, tipo: m.tipo, concepto: m.concepto });
+  }
+  for (const m of movs) {
+    if (m.estado === 'descartado' || m.fuente === 'duplicado' || m.confianza === 'alta') continue;
+    const c = porCuit.get(claveComercio(m.conceptoOrigen));
+    if (!c || !c.centro) continue;
+    m.centro = c.centro;
+    m.tipo = c.tipo;
+    m.concepto = c.concepto;
+    m.confianza = 'media';
+    m.fuente = 'cuit';
+  }
+
+  return cruzarTransferencias(movs);
 }
 
 /* ── Borrador ── */

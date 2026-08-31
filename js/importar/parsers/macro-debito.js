@@ -6,9 +6,25 @@ import { normalizarTexto, toISO } from '../normalizar.js';
 
 export const METODO = 'Macro Manual';
 
+/* CUITs conocidos. Editar acá si cambia alguna cuenta. */
+export const CUIT_PROPIOS = ['20238486433'];          // cuentas propias (Ualá)
+export const CUIT_TARJETAS = { '30574816870': 'AMEX' };
+
 /* Pagos de tarjeta: el detalle ya viene en el resumen de VISA/Master,
    importarlos acá sumaría el gasto dos veces. */
 const RE_PAGO_TARJETA = /DB\.?\s*TARJETA DE CREDITO|PAGO TARJETA/;
+
+/* Los DEBIN salientes de esta cuenta son pagos de tarjeta.
+   Ojo: los EGRESO no son lo mismo — van a otros CUITs y sí son gastos. */
+const RE_DEBIN = /^DEBIN\b/;
+const RE_TRANSF = /^TRANSF\b/;
+
+/* Último CUIT (11 dígitos) que aparece en la descripción: en los DEBIN va
+   detrás del guion y en las transferencias es el destinatario. */
+function cuitDestino(desc) {
+  const m = String(desc).match(/\b(\d{11})\b/g);
+  return m ? m[m.length - 1] : null;
+}
 
 /* Movimientos que no representan un gasto real. */
 const RE_NO_GASTO = /CAPITALIZACION|SOL\.?RESC|RESCATE|CTO CV ME|ACREDITACION|DEPOSITO/;
@@ -69,6 +85,15 @@ export function parseMacroDebito(filas, opts = {}) {
     } else if (RE_PAGO_TARJETA.test(descN)) {
       estado = 'descartado';
       motivo = 'Pago de tarjeta — el detalle viene en el resumen de la tarjeta';
+    } else if (RE_DEBIN.test(descN)) {
+      const tarjeta = CUIT_TARJETAS[cuitDestino(desc)];
+      estado = 'descartado';
+      motivo = tarjeta
+        ? `Pago de ${tarjeta} — el detalle viene en el resumen de la tarjeta`
+        : 'DEBIN saliente — suele ser un pago de tarjeta';
+    } else if (RE_TRANSF.test(descN) && CUIT_PROPIOS.includes(cuitDestino(desc))) {
+      estado = 'descartado';
+      motivo = 'Transferencia a una cuenta propia, no es un gasto';
     }
 
     movs.push({
