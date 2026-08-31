@@ -20,6 +20,7 @@ import { anotarDuplicados, cruzarTransferencias } from './dedup.js';
 import { parseImporteFlexible, formatImporteEdit } from './normalizar.js';
 import { commitImportacion } from './commit.js';
 import { renderRevision, renderResumen, metodosDisponibles } from './revision.js';
+import { registrarImportacion, renderCobertura } from './registro.js';
 
 const E = { movs: [], filtro: 'todos', trabajando: false, cancelado: false };
 
@@ -187,6 +188,7 @@ function anotarDuplicadosPreservando(movs) {
 
 /* ── UI ── */
 function mostrarPaso(paso) {
+  if (paso === 'archivo') renderCobertura($('import-cobertura'));
   for (const p of ['archivo', 'progreso', 'revision']) {
     $(`import-paso-${p}`)?.classList.toggle('hidden', p !== paso);
   }
@@ -406,11 +408,20 @@ export async function aprobarImportacion() {
   try {
     const { insertados, error } = await commitImportacion(E.movs);
     if (error) { toastError(error); return; }
-    E.movs = E.movs.filter(m => !m.incluir);
+    registrarImportacion(marcados);
+
+    /* El lote se cierra entero: la próxima importación arranca limpia y no
+       quedan restos de la anterior. Lo no importado queda avisado. */
+    const quedaron = E.movs.length - marcados.length;
+    E.movs = [];
+    E.filtro = 'todos';
     limpiarBorrador();
-    if (E.movs.length) { guardarBorrador(); renderRevision(E.movs, E.filtro); }
-    else { mostrarPaso('archivo'); $('import-overlay')?.classList.add('hidden'); document.body.classList.remove('import-abierto'); }
+    renderRevision(E.movs, E.filtro);
+    mostrarPaso('archivo');
     toast(`${insertados} gasto${insertados === 1 ? '' : 's'} importado${insertados === 1 ? '' : 's'}`);
+    if (quedaron > 0) {
+      setTimeout(() => toastWarn(`Se cerró el lote; ${quedaron} fila${quedaron === 1 ? '' : 's'} sin importar quedaron afuera`), 1900);
+    }
     await registry.cargarDatos?.();
   } catch (e) {
     toastError(e.message || 'Error al importar');

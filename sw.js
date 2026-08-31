@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'gastos-pwa-v2.7.0';
+const CACHE_VERSION = 'gastos-pwa-v2.8.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const CDN_CACHE = `${CACHE_VERSION}-cdn`;
@@ -25,6 +25,7 @@ const APP_SHELL = [
   'js/importar/clasificar.js',
   'js/importar/revision.js',
   'js/importar/commit.js',
+  'js/importar/registro.js',
   'js/importar/parsers/libs.js',
   'js/importar/parsers/fuentes.js',
   'js/importar/parsers/columnas.js',

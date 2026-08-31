@@ -250,3 +250,12 @@ body.import-abierto{overflow:hidden}
 .import-pegar-pie label{font-size:.85rem;font-weight:600;color:var(--text2)}
 .import-pegar-pie select{padding:.5rem .7rem;border-radius:.5rem;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text)}
 .import-pegar-pie .import-btn-ok{margin-left:auto}
+
+/* Cobertura por método en el importador */
+.import-cobertura:not(:empty){margin-bottom:1.25rem;padding:.85rem 1rem;border-radius:.75rem;background:var(--kpi-bg);border:1px solid var(--border-solid)}
+.import-cob-cab{font-size:.8rem;color:var(--text3);margin-bottom:.6rem}
+.import-cob-titulo{font-size:.7rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.03em;margin-bottom:.35rem}
+.import-cob-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.15rem .9rem}
+.import-cob-fila{display:flex;justify-content:space-between;gap:.75rem;font-size:.82rem;padding:.15rem 0;border-bottom:1px dotted var(--border-solid)}
+.import-cob-fila span:first-child{color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.import-cob-fecha{font-weight:700;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
