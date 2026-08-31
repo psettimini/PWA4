@@ -14,11 +14,12 @@ import { parseMacroDebito } from './parsers/macro-debito.js';
 import { parseUala } from './parsers/uala.js';
 import { parseBbvaTarjeta } from './parsers/bbva-tarjeta.js';
 import { parseBbvaCuenta } from './parsers/bbva-cuenta.js';
+import { parseTexto } from './parsers/texto.js';
 import { clasificar, getMemoria, claveComercio } from './clasificar.js';
 import { anotarDuplicados, cruzarTransferencias } from './dedup.js';
 import { parseImporteFlexible, formatImporteEdit } from './normalizar.js';
 import { commitImportacion } from './commit.js';
-import { renderRevision, renderResumen } from './revision.js';
+import { renderRevision, renderResumen, metodosDisponibles } from './revision.js';
 
 const E = { movs: [], filtro: 'todos', trabajando: false, cancelado: false };
 
@@ -35,7 +36,8 @@ export const ORIGENES = {
   'bbva-visa': 'VISA BBVA',
   'bbva-master': 'Master BBVA',
   'bbva-cuenta': 'Caja de ahorros BBVA',
-  uala: 'Ualá'
+  uala: 'Ualá',
+  texto: 'texto pegado'
 };
 
 /* ── Detección de origen ── */
@@ -199,6 +201,13 @@ function progreso(texto, valor) {
 
 export function abrirImportador() {
   if (S.userRole === 'viewer') return;
+  const sel = $('import-texto-metodo');
+  if (sel) {
+    const previo = sel.value;
+    const metodos = metodosDisponibles();
+    sel.innerHTML = metodos.map(m => `<option value="${m.replace(/"/g, '&quot;')}">${m}</option>`).join('');
+    sel.value = previo && metodos.includes(previo) ? previo : (metodos.includes('AMEX') ? 'AMEX' : metodos[0] || '');
+  }
   $('import-overlay')?.classList.remove('hidden');
   document.body.classList.add('import-abierto');
   if (E.movs.length) { mostrarPaso('revision'); renderRevision(E.movs, E.filtro); }
@@ -289,6 +298,34 @@ export async function importarArchivos(files) {
     E.trabajando = false;
     E.cancelado = false;
     const inp = $('import-file'); if (inp) inp.value = '';
+  }
+}
+
+/* ── Texto pegado ──
+   Sirve para cargar desde el listado del home banking sin bajar el resumen.
+   El método lo elige el usuario: el texto no dice de qué banco viene. */
+export function importarTexto() {
+  if (E.trabajando) return;
+  const texto = $('import-texto')?.value || '';
+  if (!texto.trim()) { toastWarn('Pegá el listado de movimientos'); return; }
+  const metodo = $('import-texto-metodo')?.value || 'AMEX';
+
+  const r = parseTexto(texto, { metodo });
+  if (!r.movimientos.length) {
+    toastWarn('No reconocí ningún movimiento. Cada línea tiene que empezar con la fecha e incluir el importe con su signo de moneda.');
+    return;
+  }
+
+  E.movs = preparar([...E.movs, ...r.movimientos]);
+  E.filtro = 'todos';
+  guardarBorrador();
+  mostrarPaso('revision');
+  renderRevision(E.movs, E.filtro);
+  $('import-texto').value = '';
+  toast(`${r.movimientos.length} movimientos leídos del texto`);
+  if (r.sinImporte.length) {
+    console.warn('[Importar] Líneas sin importe reconocible:', r.sinImporte);
+    setTimeout(() => toastWarn(`${r.sinImporte.length} línea${r.sinImporte.length === 1 ? '' : 's'} sin importe reconocible`), 1900);
   }
 }
 

@@ -278,7 +278,7 @@ Esto garantiza que se muestren centros/métodos recién creados aunque no tengan
 | Cuenta | Email del usuario + botón "Salir" (con confirmación) |
 | Recargar | Ejecuta `cargarDatos()` manualmente |
 | Exportar CSV | Descarga completa de todos los registros |
-| Versión | Badge visual `APP_VERSION` (2.6.0) |
+| Versión | Badge visual `APP_VERSION` (2.7.0) |
 | Modo oscuro | Toggle switch con estado persistido |
 | Instrucciones iOS | Guía para instalar PWA en iPhone vía Safari |
 | ABM Centros | Panel de gestión de centros de gasto |

@@ -241,3 +241,12 @@ body.import-abierto{overflow:hidden}
 .import-btn-ok{padding:.6rem 1.25rem;border-radius:.5rem;border:none;background:#8b5cf6;color:#fff;font-size:.9rem;font-weight:700;cursor:pointer}
 .import-btn-ok:hover:not(:disabled){background:#7c3aed}
 .import-btn-ok:disabled{opacity:.5;cursor:not-allowed}
+
+/* Pegar texto en el importador */
+.import-separador{display:flex;align-items:center;gap:.75rem;margin:1.5rem 0 1rem;color:var(--text3);font-size:.8rem}
+.import-separador::before,.import-separador::after{content:'';flex:1;border-top:1px solid var(--border-solid)}
+.import-pegar textarea{width:100%;padding:.7rem .8rem;border-radius:.6rem;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text);font-size:.85rem;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical;line-height:1.5}
+.import-pegar-pie{display:flex;align-items:center;gap:.6rem;margin-top:.6rem;flex-wrap:wrap}
+.import-pegar-pie label{font-size:.85rem;font-weight:600;color:var(--text2)}
+.import-pegar-pie select{padding:.5rem .7rem;border-radius:.5rem;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text)}
+.import-pegar-pie .import-btn-ok{margin-left:auto}

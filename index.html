@@ -346,6 +346,16 @@
         </select>
       </div>
       <p class="import-nota"><i class="fas fa-circle-info mr-1"></i>Los resúmenes de Macro y las capturas de Ualá son imágenes: se leen con reconocimiento de texto, que la primera vez descarga unos 7 MB y después queda guardado.</p>
+
+      <div class="import-separador"><span>o pegá los movimientos</span></div>
+      <div class="import-pegar">
+        <textarea id="import-texto" rows="5" placeholder="Copiá el listado de movimientos del home banking y pegalo acá. Una línea por movimiento, empezando por la fecha."></textarea>
+        <div class="import-pegar-pie">
+          <label for="import-texto-metodo">Método</label>
+          <select id="import-texto-metodo"></select>
+          <button type="button" data-action="importarTexto" class="import-btn-ok"><i class="fas fa-align-left mr-2"></i>Procesar texto</button>
+        </div>
+      </div>
     </div>
 
     <!-- Paso 2: progreso -->
