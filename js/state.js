@@ -24,10 +24,11 @@ export const S = {
   lastWindowWidth: window.innerWidth,
   dashboardMoneda: 'ARS',
   compararMoneda: 'ARS',
+  presupuesto: [],
 };
 
 export const HISTORIAL_PAGE_SIZE = 50;
-export const APP_VERSION = '2.8.0';
+export const APP_VERSION = '2.9.0';
 export const MONEDAS = ['ARS', 'USD'];
 export const MONEDA_DEFAULT = 'ARS';
 export const STORAGE_KEYS = {
@@ -37,7 +38,8 @@ export const STORAGE_KEYS = {
   pendingQueue: 'gastos_pending_queue_v3',
   historyFilters: 'gastos_historial_filters_v2',
   dismissals: 'gastos_fijos_dismissed_v1',
-  importDraft: 'gastos_import_draft_v1'
+  importDraft: 'gastos_import_draft_v1',
+  presupuestoCache: 'gastos_presupuesto_cache_v1'
 };
 
 export const $ = id => document.getElementById(id);
@@ -50,4 +52,5 @@ export const registry = {
   renderHistorial: null,
   onTabChange: null,
   showTab: null,
+  renderPresupuesto: null,
 };

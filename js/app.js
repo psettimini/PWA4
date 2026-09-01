@@ -11,6 +11,9 @@ import { guardarGasto, cancelarEdicion, borrarGasto, procesarPatrones, actualiza
 import { renderHistorial, filtrarHistorial, filtrarHistorialDebounced, limpiarFiltros, exportarHistorialFiltrado, exportarCSV, editarGasto, cargarMasHistorial } from './historial.js';
 import { renderDashboard, renderEvolucionCentro, renderEvolucionConcepto } from './dashboard.js';
 import { initComparar, renderComparar } from './comparar.js';
+import { renderPresupuesto, presupDetectar, presupToggleDetectado, presupTodosDetectados, presupEditarDetectado,
+         presupCancelarDeteccion, presupConfirmarDeteccion, presupEditarImporte, presupEditarFrecuencia,
+         presupEditarAncla, presupToggleActivo, presupBorrar, presupNuevoToggle, presupGuardarNuevo } from './presupuesto.js';
 import { renderABM, updateMetodoSelect, abmAdd, abmRename, abmMerge, abmRemoveCustom } from './abm.js';
 import { abrirImportador, cerrarImportador, aprobarImportacion, descartarTodo, setFiltro, descartarFila, restaurarFila, volverAArchivo, cancelarLectura, importarTexto, initImportador } from './importar/index.js';
 
@@ -29,6 +32,7 @@ registry.onTabChange = (tab) => {
   if (tab === 'historial') { S.historialPage = 0; restoreHistoryFilters(); renderHistorial(); }
   if (tab === 'dashboard') renderDashboard();
   if (tab === 'comparar') initComparar();
+  if (tab === 'presupuesto') renderPresupuesto();
   if (tab === 'config') renderABM();
 };
 
@@ -79,6 +83,15 @@ const clickActions = {
   volverAArchivo: () => volverAArchivo(),
   cancelarLectura: () => cancelarLectura(),
   importarTexto: () => importarTexto(),
+  /* Presupuesto */
+  presupDetectar: () => presupDetectar(),
+  presupTodosDetectados: (d) => presupTodosDetectados(d.valor === '1'),
+  presupCancelarDeteccion: () => presupCancelarDeteccion(),
+  presupConfirmarDeteccion: () => presupConfirmarDeteccion(),
+  presupToggleActivo: (d) => presupToggleActivo(d.id),
+  presupBorrar: (d) => presupBorrar(d.id, d.concepto),
+  presupNuevoToggle: () => presupNuevoToggle(),
+  presupGuardarNuevo: () => presupGuardarNuevo(),
   /* PWA */
   reload: () => location.reload(),
   dismissUpdateBanner: () => dismissUpdateBanner(),
@@ -101,13 +114,24 @@ const changeActions = {
   renderDashboard: () => renderDashboard(),
   renderEvolucionCentro: () => renderEvolucionCentro(),
   renderEvolucionConcepto: () => renderEvolucionConcepto(),
+  /* Presupuesto — reciben (dataset, event, elemento) */
+  presupToggleDetectado: (d) => presupToggleDetectado(d.idx),
+  presupEditarDetectadoImporte: (d, e, el) => presupEditarDetectado(d.idx, 'importe', el.value),
+  presupEditarDetectadoFrecuencia: (d, e, el) => presupEditarDetectado(d.idx, 'frecuencia', el.value),
+  presupEditarDetectadoAncla: (d, e, el) => presupEditarDetectado(d.idx, 'ancla', el.value),
+  presupEditarImporte: (d, e, el) => presupEditarImporte(d.id, el.value),
+  presupEditarFrecuencia: (d, e, el) => presupEditarFrecuencia(d.id, el.value),
+  presupEditarAncla: (d, e, el) => presupEditarAncla(d.id, el.value),
 };
 
 document.addEventListener('change', (e) => {
   const el = e.target.closest('[data-change]');
   if (!el) return;
   const fn = changeActions[el.dataset.change];
-  if (fn) fn();
+  if (fn) {
+    if (fn.length === 0) fn();
+    else fn(el.dataset, e, el);
+  }
 });
 
 /* ══════════════════════════════════════════

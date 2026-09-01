@@ -84,7 +84,7 @@ export function showTab(tab) {
   S.formDirty = false;
   S.currentTab = tab;
   localStorage.setItem('gastos_tab', tab);
-  ['carga','historial','dashboard','comparar','config'].forEach(t => {
+  ['carga','historial','dashboard','comparar','presupuesto','config'].forEach(t => {
     $('section-'+t)?.classList.add('hidden');
     const b = $('tab-'+t); if (b) { b.classList.remove('tab-active'); b.classList.add('text-slate-600'); }
     const bn = $('bnav-'+t); if (bn) bn.classList.remove('bnav-active');

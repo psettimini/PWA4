@@ -6,6 +6,7 @@ import { $, S, sb, registry } from './state.js';
 import { saveCache, loadCache, updateNetworkStatus, getPendingQueue, setPendingQueue, showLoading } from './utils.js';
 import { toastError, toastWarn, toast } from './ui.js';
 import { showAuth } from './auth.js';
+import { cargarPresupuesto } from './presupuesto.js';
 
 function isAuthError(e) {
   if (!e) return false;
@@ -58,6 +59,7 @@ export async function cargarDatos() {
     S.allData = transformGastos(raw);
     await loadCentrosFromDB();
     await loadMetodosFromDB();
+    await cargarPresupuesto();
     saveCache(S.allData);
     updateConnectionUI(S.allData.length, false);
     updateNetworkStatus('Datos actualizados', 'ok');

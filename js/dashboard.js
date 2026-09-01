@@ -4,6 +4,7 @@
 ======================================== */
 import { $, S } from './state.js';
 import { safeNumber, formatearNumero, formatImporte, localMesStr, getMesKey, uniqueSorted, destroyChart, escapeHtml, escapeAttr, aggregateBy } from './utils.js';
+import { costoFijoMensual } from './presupuesto.js';
 
 function computeStats(moneda) {
   const data = S.allData.filter(g => (g.Moneda || 'ARS') === moneda);
@@ -47,6 +48,10 @@ export function renderDashboard() {
   $('dash-movimientos-usd').textContent = usd.movimientos;
   $('dash-ticket-promedio').textContent = formatImporte(ars.ticketPromedio, 'ARS');
   $('dash-ticket-promedio-usd').textContent = formatImporte(usd.ticketPromedio, 'USD');
+  /* Costo fijo mensual: sale del presupuesto, no del histórico → no lo afecta
+     que un mes tenga dos pagos del mismo fijo o ninguno. */
+  if ($('dash-costo-fijo')) $('dash-costo-fijo').textContent = formatImporte(costoFijoMensual('ARS'), 'ARS');
+  if ($('dash-costo-fijo-usd')) $('dash-costo-fijo-usd').textContent = formatImporte(costoFijoMensual('USD'), 'USD');
 
   const moneda = $('dash-moneda')?.value === 'USD' ? 'USD' : 'ARS';
   S.dashboardMoneda = moneda;
