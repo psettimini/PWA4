@@ -7,7 +7,7 @@ import { setFechaHoy, updateCacheLabel, updatePendingBadge, updateNetworkStatus,
 import { initDarkMode, showTab, showUpdateBanner, dismissUpdateBanner, toast, toastWarn, toggleDarkMode } from './ui.js';
 import { showAuth, hideAuth, showAuthMode, doLogin, doRegister, doResetPassword, doLogout, loadUserProfile, applyRoleUI } from './auth.js';
 import { cargarDatos, syncPendingQueue } from './data.js';
-import { guardarGasto, cancelarEdicion, borrarGasto, procesarPatrones, actualizarSugerencias, actualizarResumen, seleccionarPatron, seleccionarFijo, guardarFijoRapido, filtrarSugerencias, mostrarSugerenciasDebounced, navegarSugerencias, setMoneda, dismissFijoPendiente, evaluarImporteOnBlur } from './carga.js';
+import { guardarGasto, cancelarEdicion, borrarGasto, procesarPatrones, actualizarSugerencias, actualizarResumen, seleccionarPatron, seleccionarFijo, guardarFijoRapido, filtrarSugerencias, mostrarSugerenciasDebounced, navegarSugerencias, setMoneda, dismissFijoPendiente, evaluarImporteOnBlur, toggleDetectadosCarga, presupuestarDetectadoCarga } from './carga.js';
 import { renderHistorial, filtrarHistorial, filtrarHistorialDebounced, limpiarFiltros, exportarHistorialFiltrado, exportarCSV, editarGasto, cargarMasHistorial } from './historial.js';
 import { renderDashboard, renderEvolucionCentro, renderEvolucionConcepto } from './dashboard.js';
 import { initComparar, renderComparar } from './comparar.js';
@@ -55,6 +55,8 @@ const clickActions = {
   seleccionarFijo: (d) => seleccionarFijo(d.concepto, d.centro, d.tipo, d.metodo, Number(d.importe), d.moneda),
   guardarFijoRapido: (d, e, el) => { e.stopPropagation(); guardarFijoRapido(d.concepto, d.centro, d.tipo, d.metodo, Number(d.importe), d.moneda, el); },
   dismissFijoPendiente: (d, e) => { e.stopPropagation(); dismissFijoPendiente(d.concepto, d.centro, d.moneda); },
+  toggleDetectadosCarga: () => toggleDetectadosCarga(),
+  presupuestarDetectado: (d, e) => { e.stopPropagation(); presupuestarDetectadoCarga(d.key); },
   /* Historial */
   editarGasto: (d) => editarGasto(d.id),
   borrarGasto: (d) => borrarGasto(d.id, d.concepto),

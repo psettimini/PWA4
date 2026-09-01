@@ -187,6 +187,86 @@ export function detectarFijos() {
   return out;
 }
 
+/* ── Pendientes del mes (fuente de verdad para la pestaña Carga) ──
+   A diferencia de la heurística vieja (mirar los últimos 3 meses), acá un ítem
+   solo aparece el mes en que efectivamente vence: un trimestral no molesta los
+   otros dos meses, y un anual aparece una vez al año en su mes. */
+function clavesCargadasEn(mesKey) {
+  const set = new Set();
+  for (const g of S.allData) {
+    if (g.Fecha && g.Fecha.startsWith(mesKey)) set.add(`${g.Concepto}|${g.Centro}|${g.Moneda || 'ARS'}`);
+  }
+  return set;
+}
+
+function ultimoPagoPorClave() {
+  const map = new Map();
+  for (const g of S.allData) {
+    if (!g.Fecha) continue;
+    const k = `${g.Concepto}|${g.Centro}|${g.Moneda || 'ARS'}`;
+    const prev = map.get(k);
+    if (!prev || g.Fecha > prev.fecha) map.set(k, { fecha: g.Fecha, importe: safeNumber(g.Importe) });
+  }
+  return map;
+}
+
+export function pendientesDelMes(mesKey = localMesStr()) {
+  const cargados = clavesCargadasEn(mesKey);
+  const ultimo = ultimoPagoPorClave();
+  return itemsActivos()
+    .filter(p => venceEnMes(p, mesKey) && !cargados.has(claveDe(p)))
+    .map(p => {
+      const u = ultimo.get(claveDe(p));
+      const imp = safeNumber(p.Importe);
+      return { ...p, ultimoPago: u ? u.importe : null, ultimaFecha: u ? u.fecha : null,
+               variacion: u && u.importe !== 0 ? (imp - u.importe) / Math.abs(u.importe) * 100 : null };
+    })
+    .sort((a, b) => Math.abs(safeNumber(b.Importe)) - Math.abs(safeNumber(a.Importe)));
+}
+
+/* Ítems no mensuales a los que les falta el mes ancla: sin él no se puede saber
+   cuándo vencen, así que nunca aparecerían como pendientes. Hay que avisarlo. */
+export const itemsSinAncla = () => itemsActivos().filter(p => mesesDe(p) > 1 && !p.MesAncla);
+
+/* Red de seguridad: fijos que el historial muestra como vigentes y todavía no
+   están presupuestados. detectarFijos() ya excluye lo que está en el presupuesto. */
+let ultimaDeteccionCarga = [];
+export function detectadosSinPresupuestar(mesKey = localMesStr()) {
+  const cargados = clavesCargadasEn(mesKey);
+  ultimaDeteccionCarga = detectarFijos().filter(d => d.vigente && !cargados.has(d.key));
+  return ultimaDeteccionCarga;
+}
+
+export async function presupuestarDetectado(key) {
+  const d = ultimaDeteccionCarga.find(x => x.key === key);
+  if (!d) { toastWarn('No se encontró el ítem; recargá los datos'); return false; }
+  try {
+    const { error } = await sb.from('presupuesto_fijos').insert({
+      user_id: S.currentUserId, concepto: d.concepto, centro: d.centro, moneda: d.moneda,
+      metodo: d.metodo || null, importe: d.importe, frecuencia: d.frecuencia,
+      mes_ancla: FRECUENCIAS[d.frecuencia].meses === 1 ? null : d.mesAncla, activo: true
+    });
+    if (error) throw error;
+    await cargarPresupuesto();
+    toast(`"${d.concepto}" agregado al presupuesto`);
+    return true;
+  } catch (e) {
+    console.error('[presupuestarDetectado]', e.message || e);
+    toastError('No se pudo agregar al presupuesto');
+    return false;
+  }
+}
+
+/* Avance del mes: cuántos fijos que vencen ya se cargaron y cuánto falta pagar. */
+export function avanceFijosDelMes(mesKey = localMesStr()) {
+  const cargados = clavesCargadasEn(mesKey);
+  const vencen = itemsActivos().filter(p => venceEnMes(p, mesKey));
+  const faltan = vencen.filter(p => !cargados.has(claveDe(p)));
+  const suma = m => faltan.filter(p => p.Moneda === m).reduce((s, p) => s + safeNumber(p.Importe), 0);
+  return { total: vencen.length, hechos: vencen.length - faltan.length,
+           faltaARS: suma('ARS'), faltaUSD: suma('USD') };
+}
+
 /* ── UI ── */
 let detectados = [];
 

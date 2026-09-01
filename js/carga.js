@@ -3,8 +3,9 @@
    carga.js — Usa registry.cargarDatos y registry.renderHistorial
 ======================================== */
 import { $, S, sb, registry, MONEDA_DEFAULT } from './state.js';
-import { safeNumber, formatearNumero, formatImporte, localDateStr, localMesStr, getMesKey, uniqueSorted, escapeHtml, escapeAttr, formatMesLabel, enqueueOperation, saveCache, debounce, showLoading, buildDismissalsMap, hasConsecutiveDismissals, addDismissal, clearDismissalsForKey, evalExpresion } from './utils.js';
+import { safeNumber, formatearNumero, formatImporte, localDateStr, localMesStr, getMesKey, uniqueSorted, escapeHtml, escapeAttr, formatMesLabel, enqueueOperation, saveCache, debounce, showLoading, buildDismissalsMap, addDismissal, clearDismissalsForKey, evalExpresion } from './utils.js';
 import { toast, toastWarn, toastError, modalConfirm } from './ui.js';
+import { pendientesDelMes, detectadosSinPresupuestar, presupuestarDetectado, itemsActivos, itemsSinAncla, avanceFijosDelMes, FRECUENCIAS } from './presupuesto.js';
 
 function fijoKey(concepto, centro, moneda) {
   return `${concepto}|${centro}|${moneda || 'ARS'}`;
@@ -197,76 +198,95 @@ export function seleccionarPatron(concepto, centro, moneda) {
 export function filtrarSugerencias() { if ($('concepto').value.length >= 2) mostrarSugerencias($('concepto').value); }
 export const mostrarSugerenciasDebounced = debounce((v) => mostrarSugerencias(v), 120);
 
-/* ── Fijos Pendientes (últimos 3 meses) ── */
+/* ── Fijos Pendientes ──
+   El presupuesto es la fuente de verdad: un ítem aparece solo el mes en que
+   vence. Debajo, plegada, la detección sobre el historial actúa de red de
+   seguridad para lo que todavía no se presupuestó. */
+let mostrarDetectados = false;
+
+export function toggleDetectadosCarga() {
+  mostrarDetectados = !mostrarDetectados;
+  actualizarSugerencias();
+}
+
+const monedaTag = m => m === 'USD'
+  ? '<span class="ml-1 text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full font-bold">U$S</span>' : '';
+
+function filaPendiente(s) {
+  let varHtml = '';
+  if (s.variacion !== null && Math.abs(s.variacion) >= 5) {
+    const up = s.variacion > 0;
+    varHtml = `<span class="text-xs ${up ? 'text-red-500' : 'text-emerald-500'} ml-1">${up ? '↑' : '↓'}${Math.abs(s.variacion).toFixed(0)}%</span>`;
+  }
+  const frec = FRECUENCIAS[s.Frecuencia];
+  const frecTag = frec && frec.meses > 1
+    ? `<span class="ml-1 text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">${escapeHtml(frec.label)}</span>` : '';
+  const ultimo = s.ultimoPago !== null
+    ? `<span class="text-xs text-slate-400 ml-1">último ${formatImporte(s.ultimoPago, s.Moneda)}</span>` : '';
+  return `<div class="flex items-center gap-2 p-2 bg-amber-50 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-100 transition-colors" data-action="seleccionarFijo" data-concepto="${escapeAttr(s.Concepto)}" data-centro="${escapeAttr(s.Centro)}" data-tipo="F" data-metodo="${escapeAttr(s.Metodo)}" data-moneda="${escapeAttr(s.Moneda)}" data-importe="${s.Importe}">
+    <div class="flex-1 min-w-0"><div class="text-sm font-bold truncate">${escapeHtml(s.Concepto)}${monedaTag(s.Moneda)}${frecTag}</div><div class="text-xs text-amber-800">${escapeHtml(s.Centro)}${ultimo}</div></div>
+    <div class="text-right whitespace-nowrap"><div class="text-sm font-bold text-amber-700">${formatImporte(s.Importe, s.Moneda)}${varHtml}</div></div>
+    <button data-action="dismissFijoPendiente" data-concepto="${escapeAttr(s.Concepto)}" data-centro="${escapeAttr(s.Centro)}" data-moneda="${escapeAttr(s.Moneda)}" class="ml-1 w-7 h-7 flex-shrink-0 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md text-xs" title="Descartar solo este mes (para darlo de baja, editalo en Presupuesto)"><i class="fas fa-times"></i></button>
+    <button data-action="guardarFijoRapido" data-concepto="${escapeAttr(s.Concepto)}" data-centro="${escapeAttr(s.Centro)}" data-tipo="F" data-metodo="${escapeAttr(s.Metodo)}" data-moneda="${escapeAttr(s.Moneda)}" data-importe="${s.Importe}" class="ml-1 w-9 h-9 flex-shrink-0 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm" title="Cargar directo"><i class="fas fa-bolt"></i></button>
+  </div>`;
+}
+
+function filaDetectado(d) {
+  const frec = FRECUENCIAS[d.frecuencia];
+  const frecTag = frec.meses > 1
+    ? `<span class="ml-1 text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-full">${escapeHtml(frec.label)}</span>` : '';
+  return `<div class="flex items-center gap-2 p-2 rounded-lg border" style="border-color:var(--border-solid);background:var(--kpi-bg)">
+    <div class="flex-1 min-w-0"><div class="text-sm font-medium truncate" style="color:var(--text)">${escapeHtml(d.concepto)}${monedaTag(d.moneda)}${frecTag}</div><div class="text-xs" style="color:var(--text3)">${escapeHtml(d.centro)} · último ${formatMesLabel(d.ultimoMes)}</div></div>
+    <div class="text-right whitespace-nowrap text-sm font-bold" style="color:var(--text)">${formatImporte(d.importe, d.moneda)}</div>
+    <button data-action="presupuestarDetectado" data-key="${escapeAttr(d.key)}" class="ml-1 w-9 h-9 flex-shrink-0 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm" title="Agregar al presupuesto"><i class="fas fa-bullseye"></i></button>
+  </div>`;
+}
+
 export function actualizarSugerencias() {
-  const hoy = new Date(), mesActual = localMesStr();
-  const ANUAL = 'pagado por el año';
-  const lookback = [];
-  for (let i = 1; i <= 3; i++) {
-    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-    lookback.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-  }
-  const fijos = new Map();
-  let excluidos = 0;
-  const impExcluido = { ARS: 0, USD: 0 };
-  for (const g of S.allData) {
-    if (g.Tipo !== 'F' || !g.Fecha) continue;
-    const gMes = g.Fecha.slice(0, 7);
-    if (!lookback.includes(gMes)) continue;
-    const moneda = g.Moneda || 'ARS';
-    if ((g.Metodo || '').trim().toLowerCase() === ANUAL) { if (gMes === lookback[0]) { excluidos++; impExcluido[moneda] += safeNumber(g.Importe); } continue; }
-    const key = `${g.Concepto}|${g.Centro}|${moneda}`;
-    if (fijos.has(key)) {
-      const ex = fijos.get(key);
-      if (gMes > ex._mes) { ex.importe = safeNumber(g.Importe); ex.metodo = g.Metodo; ex._mes = gMes; }
-      else if (gMes === ex._mes) ex.importe += safeNumber(g.Importe);
-    } else fijos.set(key, { concepto: g.Concepto, centro: g.Centro, tipo: g.Tipo, metodo: g.Metodo, moneda, importe: safeNumber(g.Importe), _mes: gMes });
-  }
-  for (const [key, fijo] of fijos) {
-    const srcIdx = lookback.indexOf(fijo._mes);
-    const prevMes = srcIdx < lookback.length - 1 ? lookback[srcIdx + 1] : null;
-    if (!prevMes) { fijo.variacion = null; continue; }
-    let prevImp = 0;
-    for (const g of S.allData) { if (g.Tipo !== 'F' || !g.Fecha || !g.Fecha.startsWith(prevMes)) continue; if (`${g.Concepto}|${g.Centro}|${g.Moneda || 'ARS'}` === key) prevImp += safeNumber(g.Importe); }
-    fijo.variacion = prevImp > 0 ? ((fijo.importe - prevImp) / prevImp * 100) : null;
-  }
-  const cargados = new Set();
-  for (const g of S.allData) { if (g.Fecha && g.Fecha.startsWith(mesActual)) cargados.add(`${g.Concepto}|${g.Centro}|${g.Moneda || 'ARS'}`); }
+  const div = $('lista-sugerencias'); if (!div) return;
+  const mesActual = localMesStr();
   const dismissals = buildDismissalsMap();
-  const pend = [];
-  for (const [k, v] of fijos) {
-    if (cargados.has(k)) continue;
-    const meses = dismissals.get(k);
-    if (meses && meses.has(mesActual)) continue;
-    if (meses && hasConsecutiveDismissals(meses)) continue;
-    pend.push(v);
-  }
-  pend.sort((a, b) => b.importe - a.importe);
+  const descartado = k => dismissals.get(k)?.has(mesActual);
+
+  const hayPresupuesto = itemsActivos().length > 0;
+  const pend = pendientesDelMes(mesActual).filter(p => !descartado(fijoKey(p.Concepto, p.Centro, p.Moneda)));
+  const detectados = detectadosSinPresupuestar(mesActual).filter(d => !descartado(d.key));
+  const sinAncla = itemsSinAncla();
 
   $('count-sugerencias').textContent = pend.length;
-  const div = $('lista-sugerencias');
-  if (!pend.length) { div.innerHTML = `<p class="text-sm text-emerald-600"><i class="fas fa-check-circle mr-2"></i>¡Todos los fijos cargados!</p>`; return; }
+
   const totales = { ARS: 0, USD: 0 };
-  for (const p of pend) totales[p.moneda] = (totales[p.moneda] || 0) + p.importe;
-  const totHtml = ['ARS','USD'].filter(m => totales[m] > 0).map(m => `<span class="font-bold text-red-600 ml-2">${formatImporte(totales[m], m)}</span>`).join('');
-  const exclHtml = excluidos > 0
-    ? `<div class="text-xs text-slate-400 mb-2 italic"><i class="fas fa-info-circle mr-1"></i>${excluidos} anual(es) excluidos${['ARS','USD'].filter(m=>impExcluido[m]>0).map(m=>` (${formatImporte(impExcluido[m], m)})`).join('')}</div>`
-    : '';
-  div.innerHTML =
-    `<div class="text-xs text-slate-500 mb-2 flex justify-between items-center"><span>Pendientes (últimos 3 meses)</span><span>${totHtml}</span></div>` +
-    exclHtml +
-    pend.map(s => {
-      let varHtml = '';
-      if (s.variacion !== null) { const up = s.variacion > 0, down = s.variacion < 0; const arrow = up ? '↑' : down ? '↓' : '='; const color = up ? 'text-red-500' : down ? 'text-emerald-500' : 'text-slate-400'; varHtml = `<span class="text-xs ${color} ml-1">${arrow}${Math.abs(s.variacion).toFixed(0)}%</span>`; }
-      const fromLabel = s._mes !== lookback[0] ? `<span class="text-xs text-slate-400 ml-1">(${formatMesLabel(s._mes)})</span>` : '';
-      const monedaTag = s.moneda === 'USD' ? '<span class="ml-1 text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full font-bold">U$S</span>' : '';
-      return `<div class="flex items-center gap-2 p-2 bg-amber-50 rounded-lg border border-amber-200 cursor-pointer hover:bg-amber-100 transition-colors" data-action="seleccionarFijo" data-concepto="${escapeAttr(s.concepto)}" data-centro="${escapeAttr(s.centro)}" data-tipo="${escapeAttr(s.tipo)}" data-metodo="${escapeAttr(s.metodo)}" data-moneda="${escapeAttr(s.moneda)}" data-importe="${s.importe}">
-        <div class="flex-1 min-w-0"><div class="text-sm font-bold truncate">${escapeHtml(s.concepto)}${monedaTag}${fromLabel}</div><div class="text-xs text-amber-800">${escapeHtml(s.centro)}</div></div>
-        <div class="text-right whitespace-nowrap"><div class="text-sm font-bold text-amber-700">${formatImporte(s.importe, s.moneda)}${varHtml}</div></div>
-        <button data-action="dismissFijoPendiente" data-concepto="${escapeAttr(s.concepto)}" data-centro="${escapeAttr(s.centro)}" data-moneda="${escapeAttr(s.moneda)}" class="ml-1 w-7 h-7 flex-shrink-0 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md text-xs" title="Descartar de pendientes"><i class="fas fa-times"></i></button>
-        <button data-action="guardarFijoRapido" data-concepto="${escapeAttr(s.concepto)}" data-centro="${escapeAttr(s.centro)}" data-tipo="${escapeAttr(s.tipo)}" data-metodo="${escapeAttr(s.metodo)}" data-moneda="${escapeAttr(s.moneda)}" data-importe="${s.importe}" class="ml-1 w-9 h-9 flex-shrink-0 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm" title="Cargar directo"><i class="fas fa-bolt"></i></button>
-      </div>`;
-    }).join('');
+  for (const p of pend) totales[p.Moneda] = (totales[p.Moneda] || 0) + safeNumber(p.Importe);
+  const totHtml = ['ARS','USD'].filter(m => totales[m] !== 0)
+    .map(m => `<span class="font-bold text-red-600 ml-2">${formatImporte(totales[m], m)}</span>`).join('');
+
+  let html = '';
+  if (!hayPresupuesto) {
+    html += `<div class="text-xs p-2 mb-2 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-800"><i class="fas fa-bullseye mr-1"></i>Armá tu presupuesto en la pestaña <strong>Presupuesto</strong> para que los pendientes salgan del mes que corresponde.</div>`;
+  } else {
+    html += `<div class="text-xs text-slate-500 mb-2 flex justify-between items-center"><span>Vencen en ${formatMesLabel(mesActual)}</span><span>${totHtml}</span></div>`;
+    html += pend.length
+      ? pend.map(filaPendiente).join('')
+      : `<p class="text-sm text-emerald-600"><i class="fas fa-check-circle mr-2"></i>¡Todos los fijos del mes cargados!</p>`;
+    if (sinAncla.length) {
+      html += `<div class="text-xs mt-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800"><i class="fas fa-triangle-exclamation mr-1"></i>${sinAncla.length} ítem(s) no mensual(es) sin mes asignado: no se pueden avisar hasta definirlo en <strong>Presupuesto</strong>.</div>`;
+    }
+  }
+
+  if (detectados.length) {
+    const totDet = { ARS: 0, USD: 0 };
+    for (const d of detectados) totDet[d.moneda] += d.importe;
+    const detTot = ['ARS','USD'].filter(m => totDet[m] !== 0).map(m => formatImporte(totDet[m], m)).join(' · ');
+    html += `<button type="button" data-action="toggleDetectadosCarga" class="w-full mt-3 pt-2 border-t text-xs flex items-center justify-between" style="border-color:var(--border-solid);color:var(--text3)">
+      <span><i class="fas fa-chevron-${mostrarDetectados ? 'down' : 'right'} mr-1"></i>Detectados sin presupuestar (${detectados.length})</span><span>${detTot}</span></button>`;
+    if (mostrarDetectados) html += `<div class="space-y-2 mt-2">${detectados.map(filaDetectado).join('')}</div>`;
+  }
+
+  div.innerHTML = html;
+}
+
+export async function presupuestarDetectadoCarga(key) {
+  if (await presupuestarDetectado(key)) actualizarSugerencias();
 }
 
 export function seleccionarFijo(concepto, centro, tipo, metodo, importe, moneda) {
@@ -277,14 +297,11 @@ export function seleccionarFijo(concepto, centro, tipo, metodo, importe, moneda)
 }
 
 export function dismissFijoPendiente(concepto, centro, moneda) {
-  const key = fijoKey(concepto, centro, moneda);
-  const mes = localMesStr();
-  addDismissal(key, mes);
-  const meses = buildDismissalsMap().get(key);
-  const permanente = meses && hasConsecutiveDismissals(meses);
+  /* Solo por este mes. La baja definitiva se hace desactivando el ítem en
+     Presupuesto: es explícita, reversible y sincroniza entre dispositivos. */
+  addDismissal(fijoKey(concepto, centro, moneda), localMesStr());
   actualizarSugerencias();
-  if (permanente) toast(`"${concepto}" no aparecerá más como fijo pendiente`);
-  else toast(`"${concepto}" descartado este mes`);
+  toast(`"${concepto}" descartado este mes`);
 }
 
 export async function guardarFijoRapido(concepto, centro, tipo, metodo, importe, moneda, btn) {
@@ -319,4 +336,18 @@ export function actualizarResumen() {
   $('resumen-promedio-usd').textContent = formatImporte(cnt.USD ? tot.USD / cnt.USD : 0, 'USD');
   $('resumen-total-usd-row')?.classList.toggle('hidden', tot.USD === 0);
   $('resumen-promedio-usd-row')?.classList.toggle('hidden', tot.USD === 0 && cnt.USD === 0);
+  renderAvanceFijos();
+}
+
+function renderAvanceFijos() {
+  const cont = $('resumen-fijos'); if (!cont) return;
+  const a = avanceFijosDelMes();
+  cont.classList.toggle('hidden', a.total === 0);
+  if (!a.total) return;
+  const pct = Math.round(a.hechos / a.total * 100);
+  const falta = ['ARS','USD'].filter(m => a['falta' + m] !== 0)
+    .map(m => formatImporte(a['falta' + m], m)).join(' · ');
+  cont.innerHTML = `<div class="flex justify-between items-baseline"><span class="text-slate-600 text-sm">Fijos del mes:</span><span class="font-bold text-sm">${a.hechos} de ${a.total}</span></div>
+    <div class="h-1.5 rounded-full mt-1.5 overflow-hidden" style="background:var(--border-solid)"><div class="h-full rounded-full bg-emerald-500" style="width:${pct}%"></div></div>
+    ${falta ? `<div class="text-xs mt-1.5" style="color:var(--text3)">Falta pagar <span class="font-semibold text-red-600">${falta}</span></div>` : '<div class="text-xs mt-1.5 text-emerald-600">Todo cargado</div>'}`;
 }

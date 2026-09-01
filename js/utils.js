@@ -205,14 +205,3 @@ export function buildDismissalsMap() {
   }
   return map;
 }
-
-export function hasConsecutiveDismissals(meses) {
-  const arr = [...meses].sort();
-  for (let i = 1; i < arr.length; i++) {
-    const [py, pm] = arr[i-1].split('-').map(Number);
-    const next = new Date(py, pm); /* pm es 1-12; new Date(y, pm) \u2192 primer d\u00EDa del mes siguiente */
-    const nextStr = `${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`;
-    if (arr[i] === nextStr) return true;
-  }
-  return false;
-}
