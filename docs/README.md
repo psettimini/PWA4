@@ -20,8 +20,8 @@ Funciona como una SPA (Single Page Application) con 5 secciones navegables por t
 | Documento | Contenido |
 |-----------|----------|
 | [Arquitectura](arquitectura.md) | Stack tecnológico, estructura de archivos, flujo de datos |
-| [Base de Datos](base-de-datos.md) | Esquema de tablas, RLS, función RPC `bulk_rename` |
-| [Funcionalidades](funcionalidades.md) | Detalle de cada módulo: Carga, Historial, Dashboard, Comparar, ABM, Auth, Config |
+| [Base de Datos](base-de-datos.md) | Esquema de tablas, RLS (owner/viewer), función RPC `bulk_rename` |
+| [Funcionalidades](funcionalidades.md) | Detalle de cada módulo: Carga, Historial, Dashboard, Comparar, Presupuesto, ABM, Auth, Config |
 | [UI y Estilos](ui-y-estilos.md) | Sistema de notificaciones, dark mode, responsive, variables CSS |
 | [PWA y Offline](pwa-y-offline.md) | Service Worker, cache de datos, cola de sincronización offline |
 | [Seguridad](seguridad.md) | Protecciones XSS, RLS, manejo de sesión |
@@ -45,6 +45,6 @@ Funciona como una SPA (Single Page Application) con 5 secciones navegables por t
 
 - [x] **Fase 1:** Setup de base de datos (tablas, RLS, triggers, función `bulk_rename`)
 - [x] **Fase 2:** Frontend migrado de Google Apps Script a Supabase
-- [x] **Modularización:** `index.html` split en 13 archivos
+- [x] **Modularización:** `index.html` split en módulos ES (12 en `js/` + el importador en `js/importar/`)
 - [ ] **Fase 3:** Integración de billing con MercadoPago + landing page
 - [ ] **Fase 4:** Beta launch y release público

@@ -21,6 +21,12 @@ Creada automáticamente por trigger al registrar un usuario.
 |---------|------|-------|-------------|
 | `id` | `uuid` | PK, FK → `auth.users.id` | ID del usuario |
 | `email` | `text` | — | Email del usuario |
+| `display_name` | `text` | — | Nombre visible |
+| `plan` | `text` | — | `trial` / `active` / `expired` / `cancelled`. Default `'trial'` |
+| `trial_ends_at` | `timestamptz` | — | Default `now() + 14 días` |
+| `subscription_id` | `text` | — | ID de la suscripción externa |
+| `role` | `text` | — | `owner` o `viewer`. Default `'owner'` |
+| `viewer_of` | `uuid` | FK → `auth.users.id` | Si es `viewer`, de qué owner ve los datos |
 | `created_at` | `timestamptz` | — | Fecha de creación |
 
 ---
@@ -76,6 +82,40 @@ Catálogo de métodos de pago por usuario.
 
 ---
 
+### `presupuesto_fijos`
+
+Presupuesto de gastos fijos: una fila por ítem recurrente. Es la fuente de verdad del **costo fijo mensual** y el baseline contra el que se comparan los meses.
+
+| Columna | Tipo | Nullable | Descripción |
+|---------|------|----------|-------------|
+| `id` | `uuid` | No | PK, auto-generado |
+| `user_id` | `uuid` | No | FK → `auth.users.id` (ON DELETE CASCADE) |
+| `concepto` | `text` | No | Debe coincidir con `gastos.concepto` para poder cruzarlos |
+| `centro` | `text` | No | Debe coincidir con `gastos.centro` |
+| `moneda` | `text` | No | `"ARS"` o `"USD"`. Default `'ARS'`. CHECK constraint |
+| `metodo` | `text` | Sí | Método de pago sugerido al precargar el formulario |
+| `importe` | `numeric(14,2)` | No | Monto **por ocurrencia**, no mensualizado. Default `0` |
+| `frecuencia` | `text` | No | `mensual`, `bimestral`, `trimestral`, `cuatrimestral`, `semestral`, `anual`. Default `'mensual'`. CHECK constraint |
+| `mes_ancla` | `smallint` | Sí | 1-12. Mes en que vence un ítem no mensual |
+| `dia_vencimiento` | `smallint` | Sí | 1-31 |
+| `cuotas_restantes` | `smallint` | Sí | Para gastos en cuotas |
+| `activo` | `boolean` | No | Default `true`. Dar de baja sin borrar historia |
+| `notas` | `text` | Sí | Texto libre |
+| `created_at` / `updated_at` | `timestamptz` | No | `updated_at` lo mantiene un trigger |
+
+**Constraints e índices:**
+- `UNIQUE (user_id, concepto, centro, moneda)` — la clave de un ítem es esa terna, la misma que usa la app para cruzar presupuesto contra gastos.
+- Índice `(user_id, activo)`.
+- Trigger `presupuesto_fijos_updated_at` → `presupuesto_fijos_touch_updated_at()`.
+
+**Notas:**
+- Todas las frecuencias son divisores de 12, por eso `mes_ancla` (1-12) alcanza para saber si un ítem vence en un mes dado: `(mes - mes_ancla) mod meses_de_frecuencia === 0`.
+- El **costo fijo mensual** es `importe / meses_de_frecuencia` sumado sobre los ítems activos: un anual de $120.000 aporta $10.000 por mes.
+- Un ítem no mensual **sin `mes_ancla`** cuenta para el devengado pero nunca se avisa como pendiente, porque no se puede saber cuándo vence. La UI lo señala.
+- No hay FK contra `gastos`: la relación es por nombre, igual que con `centros` y `metodos_pago`.
+
+---
+
 ## Función RPC: `bulk_rename`
 
 Función PostgreSQL para renombrar masivamente un campo en todos los registros del usuario autenticado.
@@ -112,17 +152,23 @@ const { data, error } = await sb.rpc('bulk_rename', {
 
 ## Row Level Security (RLS)
 
-Todas las tablas tienen RLS habilitado. Las políticas aseguran aislamiento total entre usuarios.
+Todas las tablas tienen RLS habilitado. El modelo tiene dos roles (`profiles.role`): el **owner**, que lee y escribe lo suyo, y el **viewer**, que solo lee los datos del owner al que apunta `profiles.viewer_of`.
+
+Dos funciones de apoyo resuelven eso en las políticas:
+
+| Función | Devuelve |
+|---------|----------|
+| `current_user_role()` | `'owner'` o `'viewer'` del usuario autenticado |
+| `viewing_user_id()` | El `user_id` del owner que el viewer puede leer |
 
 | Tabla | Operación | Política |
 |-------|-----------|----------|
-| `gastos` | SELECT | `user_id = auth.uid()` |
-| `gastos` | INSERT | `user_id = auth.uid()` |
-| `gastos` | UPDATE | `user_id = auth.uid()` |
-| `gastos` | DELETE | `user_id = auth.uid()` |
-| `centros` | SELECT/INSERT/UPDATE/DELETE | `user_id = auth.uid()` |
-| `metodos_pago` | SELECT/INSERT/UPDATE/DELETE | `user_id = auth.uid()` |
+| `gastos`, `centros`, `metodos_pago`, `presupuesto_fijos` | SELECT | `auth.uid() = user_id OR user_id = viewing_user_id()` |
+| `gastos`, `centros`, `metodos_pago`, `presupuesto_fijos` | INSERT/UPDATE/DELETE | `auth.uid() = user_id AND current_user_role() = 'owner'` |
 | `profiles` | SELECT/UPDATE | `id = auth.uid()` |
+
+**GRANTs explícitos:**  
+Desde el **30-oct-2026** Supabase deja de otorgar privilegios por default a los objetos nuevos del schema `public`. Toda tabla o vista nueva debe incluir sus `GRANT` explícitos (`authenticated`, `service_role` según corresponda) o PostgREST devuelve error `42501`.
 
 **Regla crítica de implementación:**  
 Todo `INSERT` en el frontend debe incluir `user_id: currentUserId` de forma explícita. Si se omite, Supabase retorna error 403 (forbidden) porque la política de INSERT valida que `user_id` coincida con el usuario autenticado.
@@ -144,10 +190,13 @@ Todo `INSERT` en el frontend debe incluir `user_id: currentUserId` de forma expl
       ├──────────── centros (1:N)
       │
       │ 1
-      └──────────── metodos_pago (1:N)
+      ├──────────── metodos_pago (1:N)
+      │
+      │ 1
+      └──────────── presupuesto_fijos (1:N)
 ```
 
-No hay foreign keys entre `gastos` y `centros`/`metodos_pago`. La relación es por nombre (text), lo que permite flexibilidad en el ABM (renombrar y fusionar sin restricciones de FK).
+No hay foreign keys entre `gastos` y `centros`/`metodos_pago`/`presupuesto_fijos`. La relación es por nombre (text), lo que permite flexibilidad en el ABM (renombrar y fusionar sin restricciones de FK).
 
 ---
 

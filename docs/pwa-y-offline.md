@@ -32,6 +32,7 @@ js/carga.js
 js/historial.js
 js/dashboard.js
 js/comparar.js
+js/presupuesto.js
 js/abm.js
 js/app.js
 icon-192.png

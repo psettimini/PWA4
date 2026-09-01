@@ -6,14 +6,15 @@
 
 ## Secciones de la Aplicación
 
-La app tiene 5 tabs/secciones principales:
+La app tiene 6 tabs/secciones principales:
 
 | Tab | Sección | Módulo JS | Descripción |
 |-----|---------|-----------|-------------|
 | Carga | `section-carga` | `carga.js` | Formulario para registrar gastos |
 | Historial | `section-historial` | `historial.js` | Listado filtrable de gastos |
 | Dashboard | `section-dashboard` | `dashboard.js` | KPIs y gráficos analíticos |
-| Comparar | `section-comparar` | `comparar.js` | Comparación mes a mes |
+| Comparar | `section-comparar` | `comparar.js` | Comparación mes a mes o contra el presupuesto |
+| Presupuesto | `section-presupuesto` | `presupuesto.js` | Presupuesto de gastos fijos y costo fijo mensual |
 | Config ⚙ | `section-config` | `abm.js` | Configuración, ABM de catálogos |
 
 ---
@@ -102,18 +103,23 @@ Analiza `allData` y genera:
 
 ### Fijos pendientes (`actualizarSugerencias()`)
 
-Panel lateral que muestra gastos fijos del mes anterior que todavía no fueron cargados este mes.
+Panel lateral con los fijos que vencen este mes y todavía no se cargaron. **La fuente de verdad es el presupuesto** (`presupuesto.js`), no el historial.
 
 **Lógica:**
-1. Toma gastos tipo "F" del mes anterior
-2. Excluye los que tienen método "pagado por el año"
-3. Compara con los ya cargados en el mes actual (por concepto+centro+moneda)
-4. Muestra los pendientes ordenados por importe descendente
-5. Para cada fijo muestra: concepto, centro, importe (con su moneda), y variación % vs. 2 meses atrás (↑ rojo / ↓ verde). Los gastos en USD llevan un tag `U$S`.
+1. `pendientesDelMes()` toma los ítems **activos** del presupuesto que vencen en el mes en curso (`venceEnMes()`) y todavía no aparecen en `gastos` de ese mes (por concepto+centro+moneda)
+2. Descarta los que fueron dismisseados **este mes**
+3. Ordena por importe descendente
+4. Para cada uno muestra: concepto, centro, importe presupuestado, tag de frecuencia si no es mensual, el último pago real registrado y la variación % contra él cuando supera el 5% (↑ rojo / ↓ verde). Los ítems en USD llevan un tag `U$S`.
+
+Un ítem no mensual solo aparece el mes que le toca: un trimestral con `mes_ancla = 7` aparece en julio, octubre y enero, y calla el resto del año. Si a un no mensual le falta `mes_ancla`, no se puede saber cuándo vence: el panel lo avisa en vez de omitirlo en silencio.
+
+**Detectados sin presupuestar (red de seguridad):**  
+Debajo, en una sección plegable, `detectadosSinPresupuestar()` lista los fijos que el historial muestra como vigentes y que todavía no están en el presupuesto — para que nada se pierda mientras el presupuesto se completa. El botón 🎯 los incorpora en un clic.
 
 **Acciones por fijo pendiente:**
 - **Click en la card:** Precarga el formulario para revisión antes de guardar
 - **Botón ⚡ (carga rápida):** `guardarFijoRapido()` — inserta directamente con fecha de hoy sin pasar por formulario
+- **Botón ✕ (descartar):** oculta el ítem **solo por el mes en curso**. La baja definitiva se hace desactivando el ítem en la pestaña Presupuesto: es explícita, reversible y sincroniza entre dispositivos.
 
 ### Resumen del mes (`actualizarResumen()`)
 
@@ -121,6 +127,7 @@ Panel lateral con métricas del mes actual:
 - **Total:** suma de importes en ARS (con línea adicional `U$S X` chica si hay gastos en USD)
 - **Cantidad:** número de registros (suma de ambas monedas)
 - **Promedio:** total/cantidad por moneda (ARS principal, USD chico debajo si aplica)
+- **Fijos del mes:** barra de avance `X de Y` fijos presupuestados ya cargados, más cuánto falta pagar (`avanceFijosDelMes()`). Se oculta si no hay presupuesto.
 
 ---
 
@@ -180,7 +187,7 @@ Las cards se agrupan por separadores con labels inteligentes:
 
 ## 4. Dashboard (`dashboard.js`)
 
-### KPIs (5 tarjetas con gradientes de color)
+### KPIs (6 tarjetas con gradientes de color)
 
 Cada KPI muestra el valor de **ARS** grande y debajo, en chico, el valor en **USD**.
 
@@ -191,6 +198,9 @@ Cada KPI muestra el valor de **ARS** grande y debajo, en chico, el valor en **US
 | Gastos Fijos | % del total que es tipo "F" | Púrpura |
 | Movimientos del Mes | Cantidad de registros del mes actual | Amber |
 | Ticket Promedio | Total mes actual / movimientos del mes | Rosa |
+| Costo Fijo Mensual | Suma del presupuesto de fijos mensualizado (`costoFijoMensual()`) | Índigo |
+
+El KPI "Costo Fijo Mensual" sale del presupuesto, no del histórico: no lo afecta que un mes tenga dos pagos del mismo fijo o ninguno.
 
 ### Gráficos
 
@@ -211,8 +221,23 @@ Todos los gráficos se destruyen y recrean al cambiar datos o al re-renderizar (
 
 ### Inicialización
 
-- Puebla selects con todos los meses disponibles
-- Auto-selecciona: Mes A = mes anterior, Mes B = mes actual
+- Puebla selects con todos los meses disponibles, más la opción **📊 Presupuesto** si hay ítems activos
+- Auto-selecciona: con presupuesto cargado, Mes A = Presupuesto y Mes B = mes actual; sin presupuesto, Mes A = mes anterior y Mes B = mes actual
+
+### Comparar contra el presupuesto
+
+Cualquiera de los dos lados puede ser el presupuesto. `presupuestoComoMovimientos()` lo convierte en pseudo-movimientos, así que **toda la maquinaria de comparación funciona igual**: tabla por dimensión, barras, donuts y listas.
+
+Resuelve el problema de fondo del mes contra mes: si un fijo cayó dos veces en un mes y ninguna al siguiente, la comparación entre meses mide ruido de calendario. El presupuesto es un baseline estable.
+
+Selector `#comp-presup-modo`, visible solo cuando un lado es el presupuesto:
+
+| Modo | Qué muestra |
+|------|-------------|
+| Devengado | Todo mensualizado: un anual pesa 1/12 por mes |
+| A pagar | Solo los ítems que vencen en el mes real del otro lado, por su importe completo |
+
+Las listas se re-titulan según el contexto: con el presupuesto de un lado, "Nuevos en B" pasa a ser **Fuera de presupuesto** y "Solo en A", **Presupuestado sin gasto**.
 
 ### KPIs de comparación (4 tarjetas)
 
@@ -242,12 +267,42 @@ El select permite comparar por 4 dimensiones:
 | Tabla detalle | Categoría, Mes A, Mes B, diferencia, %, barras proporcionales. Footer con TOTAL. Badge "NUEVO" para categorías nuevas |
 | Barras comparativas | Bar chart agrupado top 10 categorías |
 | Donuts distribución | Dos donuts lado a lado (top 6 + "Otros") |
-| Nuevos en B | Categorías que aparecen solo en Mes B |
-| Solo en A | Categorías que desaparecieron en Mes B |
+| Nuevos en B | Categorías que aparecen solo en Mes B (o *Fuera de presupuesto*) |
+| Solo en A | Categorías que desaparecieron en Mes B (o *Presupuestado sin gasto*) |
 
 ---
 
-## 6. ABM — Centros y Métodos (`abm.js`)
+## 6. Presupuesto (`presupuesto.js`)
+
+Presupuesto de gastos fijos. Un ítem se identifica por `concepto`+`centro`+`moneda` — la misma clave que usa el cruce contra `gastos`. El `importe` es **por ocurrencia** y la `frecuencia` define cuánto pesa por mes.
+
+### KPIs
+
+| KPI | Cálculo | Color |
+|-----|---------|-------|
+| Costo Fijo Mensual | Suma de `importe / meses_de_frecuencia` sobre los activos | Índigo |
+| A pagar en \<mes\> | Suma del `importe` completo de lo que vence este mes | Teal |
+| Ítems | Cantidad de ítems activos | Slate |
+
+### Detección automática (`detectarFijos()`)
+
+Escanea 24 meses de gastos tipo "F" y propone ítems para revisar y confirmar en bloque. Tres heurísticas:
+
+| Qué infiere | Cómo |
+|-------------|------|
+| Frecuencia | Mediana de la distancia en meses entre apariciones, redondeada a la frecuencia permitida más cercana. Un método `pagado por el año` fuerza `anual` |
+| Importe | El último pago conocido, pero medido sobre un **mes limpio**: si el último mes tuvo pago doble, retrocede al último mes con un solo pago para no tomar el monto anómalo |
+| Unidad | Si la mayoría de los meses tiene varios cargos, el ítem es multi-cargo por naturaleza y se suma el mes; si los duplicados son ocasionales, se usa un pago individual |
+
+La ventana es de 24 y no 12 meses porque un gasto anual necesita dos apariciones para que se pueda inferir su frecuencia. Los ítems cuyo último pago quedó más de un ciclo atrás se marcan como discontinuados y vienen **desmarcados** por defecto.
+
+### Gestión
+
+Lista editable inline: importe, frecuencia y mes ancla. El toggle da de baja sin borrar historia (`activo = false`) y el botón de alta manual permite cargar un fijo que el historial todavía no conoce.
+
+---
+
+## 7. ABM — Centros y Métodos (`abm.js`)
 
 Módulo de Alta, Baja y Modificación para catálogos maestros, ubicado en la sección Config.
 
@@ -271,7 +326,7 @@ Esto garantiza que se muestren centros/métodos recién creados aunque no tengan
 
 ---
 
-## 7. Configuración
+## 8. Configuración
 
 | Elemento | Descripción |
 |----------|-------------|

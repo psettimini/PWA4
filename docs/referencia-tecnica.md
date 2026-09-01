@@ -22,6 +22,9 @@
 | `dbMetodos` | Array | Métodos de pago de la tabla catálogo |
 | `currentUserId` | string/null | UUID del usuario autenticado |
 | `suggestionIndex` | number | Índice de navegación por teclado en autocomplete (-1 = ninguno) |
+| `presupuesto` | Array | Ítems del presupuesto de fijos: `{ ID, Concepto, Centro, Moneda, Metodo, Importe, Frecuencia, MesAncla, DiaVencimiento, CuotasRestantes, Activo, Notas }` |
+| `userRole` | string | `'owner'` o `'viewer'` |
+| `viewerOf` | string/null | UUID del owner cuyos datos ve un viewer |
 
 ### Constantes
 
@@ -29,7 +32,7 @@
 |-----------|-------|-------------|
 | `SUPABASE_URL` | `https://vljwkvtivthwwerqxisc.supabase.co` | URL del proyecto Supabase |
 | `SUPABASE_ANON_KEY` | JWT string | Clave pública anon |
-| `APP_VERSION` | `'2.4.0'` | Versión de la app |
+| `APP_VERSION` | `'2.10.0'` | Versión de la app |
 | `MONEDAS` | `['ARS','USD']` | Monedas soportadas |
 | `MONEDA_DEFAULT` | `'ARS'` | Moneda por defecto al cargar un gasto nuevo |
 | `STORAGE_KEYS.dark` | `'gastos_dark'` | Key localStorage para dark mode |
@@ -37,6 +40,9 @@
 | `STORAGE_KEYS.cacheMeta` | `'gastos_data_cache_meta_v4'` | Key localStorage para metadata cache |
 | `STORAGE_KEYS.pendingQueue` | `'gastos_pending_queue_v3'` | Key localStorage para cola offline |
 | `STORAGE_KEYS.historyFilters` | `'gastos_historial_filters_v2'` | Key localStorage para filtros historial |
+| `STORAGE_KEYS.dismissals` | `'gastos_fijos_dismissed_v1'` | Descartes de fijos pendientes, por mes |
+| `STORAGE_KEYS.importDraft` | `'gastos_import_draft_v1'` | Borrador del importador |
+| `STORAGE_KEYS.presupuestoCache` | `'gastos_presupuesto_cache_v1'` | Caché local del presupuesto |
 | `$` | `id => document.getElementById(id)` | Selector shorthand |
 
 ---
@@ -168,6 +174,29 @@
 | `renderDonutsComp(...)` | Donuts de distribución |
 | `renderNuevosElim(...)` | Listas de nuevos/eliminados |
 | `limpiarComparar()` | Resetea toda la sección |
+
+### `presupuesto.js` — Presupuesto de gastos fijos
+
+Un ítem se identifica por `concepto`+`centro`+`moneda`. `Importe` es por ocurrencia y `Frecuencia` define la mensualización.
+
+| Función | Descripción |
+|---------|-------------|
+| `cargarPresupuesto()` | Trae la tabla a `S.presupuesto` con fallback a caché local |
+| `importeMensual(item)` | `Importe / meses_de_frecuencia` |
+| `venceEnMes(item, mesKey)` | Si el ítem vence en ese mes, según `MesAncla` |
+| `costoFijoMensual(moneda)` | Suma de los devengados activos |
+| `aPagarEnMes(mesKey, moneda)` | Suma de lo que efectivamente vence ese mes |
+| `presupuestoComoMovimientos(moneda, modo, mesKey)` | Convierte el presupuesto en pseudo-movimientos para Comparar. `modo`: `'devengado'` o `'caja'` |
+| `detectarFijos()` | Infiere ítems desde 24 meses de historial: frecuencia por mediana de gaps, importe del último mes sin pago doble, detección multi-cargo y de discontinuados |
+| `pendientesDelMes(mesKey)` | Ítems activos que vencen ese mes y aún no se cargaron |
+| `detectadosSinPresupuestar(mesKey)` | Red de seguridad: fijos vigentes del historial que no están en el presupuesto |
+| `presupuestarDetectado(key)` | Inserta un detectado en el presupuesto |
+| `avanceFijosDelMes(mesKey)` | `{ total, hechos, faltaARS, faltaUSD }` |
+| `itemsSinAncla()` | No mensuales sin `MesAncla`: no se puede saber cuándo vencen |
+| `renderPresupuesto()` | KPIs + lista editable |
+| `presupDetectar()` / `presupConfirmarDeteccion()` | Panel de detección y alta masiva |
+
+**Constante `PRESUP_KEY`** (`'__presupuesto__'`): valor que usan los selects de Comparar para elegir el presupuesto como lado de la comparación.
 
 ### `abm.js` — Gestión de catálogos
 

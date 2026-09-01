@@ -39,7 +39,8 @@ PWA4/
 │   ├── carga.js            ← Formulario, patrones, autocomplete, fijos pendientes
 │   ├── historial.js        ← Tabla, filtros, swipe cards mobile, exportación
 │   ├── dashboard.js        ← KPIs, gráficos de evolución y distribución
-│   ├── comparar.js         ← Comparación mes a mes con gráficos y tablas
+│   ├── comparar.js         ← Comparación mes a mes (acepta el presupuesto como lado)
+│   ├── presupuesto.js      ← Presupuesto de fijos: detección, mensualización, pendientes
 │   ├── abm.js              ← ABM de centros de gasto y métodos de pago
 │   └── app.js              ← Inicialización, event listeners globales
 ├── docs/                   ← Documentación técnica (esta carpeta)
@@ -61,9 +62,10 @@ Los módulos son **ES Modules**. Las dependencias circulares entre módulos se r
 6. `carga.js` — Formulario (usa `sb`, `allData`, `patrones`, `dbCentros`)
 7. `historial.js` — Historial (usa `allData`, filtros, `editarGasto`)
 8. `dashboard.js` — Dashboard (usa `allData`, `charts`, Chart.js)
-9. `comparar.js` — Comparación (usa `allData`, `charts`, Chart.js)
-10. `abm.js` — ABM (usa `sb`, `dbCentros`, `dbMetodos`, `allData`)
-11. `app.js` — Inicialización (usa todo lo anterior)
+9. `presupuesto.js` — Presupuesto (usa `sb`, `allData`, `presupuesto`)
+10. `comparar.js` — Comparación (usa `allData`, `charts`, Chart.js, `presupuesto.js`)
+11. `abm.js` — ABM (usa `sb`, `dbCentros`, `dbMetodos`, `allData`)
+12. `app.js` — Inicialización (usa todo lo anterior)
 
 ---
 

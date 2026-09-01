@@ -8,7 +8,7 @@ PWA de **gestión de gastos personales** (es-AR). SPA en HTML/CSS/JS vanilla con
 
 - Repo: `psettimini/PWA4` (branch `main`)
 - App pública: GitHub Pages del repo
-- Versión actual: `2.4.0` (ver `js/state.js` → `APP_VERSION`)
+- Versión actual: `2.10.0` (ver `js/state.js` → `APP_VERSION`)
 
 ## Supabase
 
@@ -24,6 +24,7 @@ PWA de **gestión de gastos personales** (es-AR). SPA en HTML/CSS/JS vanilla con
 | `gastos` | ~695 | Movimientos. FK `user_id` → `auth.users.id`. Campos: `fecha`, `centro`, `tipo` (`F` o `V`), `concepto`, `metodo`, `importe` (numeric), `moneda` (`ARS` o `USD`, default `ARS`). |
 | `centros` | ~7 | Centros de gasto por usuario. |
 | `metodos_pago` | ~4 | Métodos de pago por usuario. |
+| `presupuesto_fijos` | — | Presupuesto de gastos fijos. Una fila por ítem recurrente (`concepto`+`centro`+`moneda` únicos). `importe` es **por ocurrencia**; `frecuencia` (`mensual`…`anual`) define la mensualización; `mes_ancla` (1-12) ubica los no mensuales. Campos: `metodo`, `dia_vencimiento`, `cuotas_restantes`, `activo`, `notas`. |
 
 Para inspeccionar/cambiar el schema usar las tools MCP de Supabase con `project_id=vljwkvtivthwwerqxisc`. **Nunca** correr `apply_migration` ni `execute_sql` destructivo sin confirmación previa del usuario.
 
@@ -43,7 +44,8 @@ js/
   carga.js              Form de alta/edición, patrones, autocomplete
   historial.js          Tabla, filtros, swipe cards, export
   dashboard.js          KPIs y gráficos
-  comparar.js           Comparación mes a mes
+  comparar.js           Comparación mes a mes (acepta el presupuesto como lado)
+  presupuesto.js        Presupuesto de fijos: detección, mensualización, pendientes
   abm.js                ABM centros y métodos
   app.js                Init, event listeners globales
 docs/                   Documentación técnica detallada
