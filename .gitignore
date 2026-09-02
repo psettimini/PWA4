@@ -5,3 +5,6 @@
 # Extractos bancarios de muestra (datos sensibles, no publicar).
 # Anclado a la raíz: js/importar/ es código y sí va al repo.
 /importar/
+
+# permisos locales de Claude Code: son de cada máquina
+.claude/settings.local.json
