@@ -193,6 +193,7 @@ function filaBandeja(m, titular) {
     <div class="flex-1 min-w-0">
       <div class="text-sm font-semibold truncate">${esIngreso ? '<span class="pill-ingreso">Ingreso</span>' : ''}${escapeHtml(m.Concepto)}</div>
       <div class="text-xs flex flex-wrap items-center gap-1 mt-0.5" style="color:var(--text3)">${formatFechaCorta(m.Fecha)} · ${escapeHtml(m.Centro)} ${pillLibro(m.Libro)} ${pillPersona(m.User)}</div>
+      ${m._raw?.nota_revision ? `<div class="text-xs mt-1 text-amber-700"><i class="fas fa-circle-exclamation mr-1"></i>${escapeHtml(m._raw.nota_revision)}</div>` : ''}
     </div>
     <div class="text-sm font-bold font-mono whitespace-nowrap ${signo}">${formatImporteSigned(m.Importe, m.Moneda)}</div>
     <div class="flex gap-1">${acciones}</div>
