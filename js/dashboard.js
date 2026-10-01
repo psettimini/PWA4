@@ -14,6 +14,8 @@ function sumaMes(items, mes) {
   return t;
 }
 
+let flujoLibro = null; // al cambiar de libro, el mes vuelve al último con movimientos
+
 export function renderFlujo() {
   const cont = $('dash-flujo'); if (!cont) return;
   cont.classList.toggle('hidden', !tieneHogar());
@@ -23,7 +25,10 @@ export function renderFlujo() {
   const meses = uniqueSorted([...S.allData, ...S.ingresos].map(m => getMesKey(m.Fecha))).reverse();
   const actual = localMesStr();
   if (!meses.includes(actual)) meses.unshift(actual);
-  const elegido = meses.includes(sel.value) ? sel.value : actual;
+  const ultimoConDatos = meses.find(m => m !== actual || [...S.allData, ...S.ingresos].some(x => x.Fecha?.startsWith(m))) || actual;
+  const mismoLibro = flujoLibro === S.libroActivo;
+  flujoLibro = S.libroActivo;
+  const elegido = mismoLibro && meses.includes(sel.value) ? sel.value : ultimoConDatos;
   sel.innerHTML = meses.map(m => `<option value="${escapeAttr(m)}">${escapeHtml(m)}</option>`).join('');
   sel.value = elegido;
 

@@ -252,6 +252,7 @@ export function procesarPatrones() {
   }
   S.patrones.sort((a,b)=>b.frecuencia-a.frecuencia);
 
+  for (const i of S.ingresos) { if (i.Centro) centrosSet.add(i.Centro); const mk = getMesKey(i.Fecha); if (mk) mesesSet.add(mk); }
   const centros = uniqueSorted([...centrosSet, ...S.dbCentros]);
   const metodos = uniqueSorted([...metodosSet, ...S.dbMetodos]);
   const meses = [...mesesSet].sort();
