@@ -304,3 +304,9 @@ body:not(.con-hogar) .hogar-only{display:none!important}
 .pase-modos label:has(input:checked){border-color:#7c3aed;background:color-mix(in srgb,#7c3aed 8%,transparent)}
 .pase-modos small{color:var(--text3);font-size:.72rem}
 .modal-btn-ok.pase-ok{background:#7c3aed}
+
+/* ── KPIs: el importe se achica según el ancho de su tarjeta para no desbordar ── */
+.kpi-fit{container-type:inline-size;min-width:0}
+.kpi-fit h3{font-size:clamp(.8rem,11cqi,1.875rem)!important;line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums}
+.kpi-fit .kpi-usd{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:380px){.kpi-fit.p-5{padding:1rem .8rem}}

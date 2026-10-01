@@ -224,20 +224,20 @@
         <select id="flujo-mes" data-change="renderFlujo" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm font-medium"></select>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-        <div class="rounded-2xl p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md"><p class="text-emerald-100 text-xs">Ingresos</p><h3 class="text-xl md:text-2xl font-bold" id="flujo-ingresos">$0</h3><p class="kpi-usd text-emerald-100" id="flujo-ingresos-usd">U$S 0</p></div>
-        <div class="rounded-2xl p-5 bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md"><p class="text-rose-100 text-xs">Egresos</p><h3 class="text-xl md:text-2xl font-bold" id="flujo-egresos">$0</h3><p class="kpi-usd text-rose-100" id="flujo-egresos-usd">U$S 0</p></div>
-        <div id="flujo-saldo-card" class="flujo-saldo rounded-2xl p-5 text-white shadow-md"><p class="text-xs opacity-80">Saldo</p><h3 class="text-xl md:text-2xl font-bold" id="flujo-saldo">$0</h3><p class="kpi-usd opacity-80" id="flujo-saldo-usd">U$S 0</p></div>
+        <div class="kpi-fit rounded-2xl p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md"><p class="text-emerald-100 text-xs">Ingresos</p><h3 class="text-xl md:text-2xl font-bold" id="flujo-ingresos">$0</h3><p class="kpi-usd text-emerald-100" id="flujo-ingresos-usd">U$S 0</p></div>
+        <div class="kpi-fit rounded-2xl p-5 bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md"><p class="text-rose-100 text-xs">Egresos</p><h3 class="text-xl md:text-2xl font-bold" id="flujo-egresos">$0</h3><p class="kpi-usd text-rose-100" id="flujo-egresos-usd">U$S 0</p></div>
+        <div id="flujo-saldo-card" class="kpi-fit flujo-saldo rounded-2xl p-5 text-white shadow-md"><p class="text-xs opacity-80">Saldo</p><h3 class="text-xl md:text-2xl font-bold" id="flujo-saldo">$0</h3><p class="kpi-usd opacity-80" id="flujo-saldo-usd">U$S 0</p></div>
       </div>
       <h4 class="text-sm font-semibold mb-2" style="color:var(--text2)">Ingresos del mes</h4>
       <div id="flujo-lista" class="space-y-2 max-h-80 overflow-y-auto"></div>
     </div>
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md"><p class="text-blue-100 text-xs">Mes Actual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-mes-actual">$0</h3><p class="kpi-usd text-blue-100" id="dash-mes-actual-usd">U$S 0</p></div>
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md"><p class="text-emerald-100 text-xs">Promedio Mensual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-promedio">$0</h3><p class="kpi-usd text-emerald-100" id="dash-promedio-usd">U$S 0</p></div>
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-md"><p class="text-purple-100 text-xs">Gastos Fijos</p><h3 class="text-xl md:text-3xl font-bold" id="dash-fijos">0%</h3><p class="kpi-usd text-purple-100" id="dash-fijos-usd">0%</p></div>
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-md"><p class="text-amber-100 text-xs">Movimientos del Mes</p><h3 class="text-xl md:text-3xl font-bold" id="dash-movimientos">0</h3><p class="kpi-usd text-amber-100" id="dash-movimientos-usd">U$S 0</p></div>
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-pink-500 to-pink-600 text-white shadow-md"><p class="text-pink-100 text-xs">Ticket Promedio</p><h3 class="text-xl md:text-3xl font-bold" id="dash-ticket-promedio">$0</h3><p class="kpi-usd text-pink-100" id="dash-ticket-promedio-usd">U$S 0</p></div>
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-md"><p class="text-indigo-100 text-xs">Costo Fijo Mensual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-costo-fijo">$0</h3><p class="kpi-usd text-indigo-100" id="dash-costo-fijo-usd">U$S 0</p></div>
+    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div class="kpi-fit rounded-2xl p-5 bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md"><p class="text-blue-100 text-xs">Mes Actual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-mes-actual">$0</h3><p class="kpi-usd text-blue-100" id="dash-mes-actual-usd">U$S 0</p></div>
+      <div class="kpi-fit rounded-2xl p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md"><p class="text-emerald-100 text-xs">Promedio Mensual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-promedio">$0</h3><p class="kpi-usd text-emerald-100" id="dash-promedio-usd">U$S 0</p></div>
+      <div class="kpi-fit rounded-2xl p-5 bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-md"><p class="text-purple-100 text-xs">Gastos Fijos</p><h3 class="text-xl md:text-3xl font-bold" id="dash-fijos">0%</h3><p class="kpi-usd text-purple-100" id="dash-fijos-usd">0%</p></div>
+      <div class="kpi-fit rounded-2xl p-5 bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-md"><p class="text-amber-100 text-xs">Movimientos del Mes</p><h3 class="text-xl md:text-3xl font-bold" id="dash-movimientos">0</h3><p class="kpi-usd text-amber-100" id="dash-movimientos-usd">U$S 0</p></div>
+      <div class="kpi-fit rounded-2xl p-5 bg-gradient-to-br from-pink-500 to-pink-600 text-white shadow-md"><p class="text-pink-100 text-xs">Ticket Promedio</p><h3 class="text-xl md:text-3xl font-bold" id="dash-ticket-promedio">$0</h3><p class="kpi-usd text-pink-100" id="dash-ticket-promedio-usd">U$S 0</p></div>
+      <div class="kpi-fit rounded-2xl p-5 bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-md"><p class="text-indigo-100 text-xs">Costo Fijo Mensual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-costo-fijo">$0</h3><p class="kpi-usd text-indigo-100" id="dash-costo-fijo-usd">U$S 0</p></div>
     </div>
     <div class="flex justify-end">
       <div class="flex items-center gap-2"><label for="dash-moneda" class="text-sm text-slate-600">Moneda gráficos:</label><select id="dash-moneda" data-change="renderDashboard" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm font-medium"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (U$S)</option></select></div>
@@ -280,10 +280,10 @@
       </div>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1" id="comp-label1">Total Mes A</p><h3 class="text-xl md:text-2xl font-bold text-blue-600" id="comp-total1">$0</h3><p class="kpi-usd text-violet-600" id="comp-total1-usd">U$S 0</p></div>
-      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1" id="comp-label2">Total Mes B</p><h3 class="text-xl md:text-2xl font-bold text-amber-600" id="comp-total2">$0</h3><p class="kpi-usd text-violet-600" id="comp-total2-usd">U$S 0</p></div>
-      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Diferencia</p><h3 class="text-xl md:text-2xl font-bold" id="comp-diff">$0</h3><p class="kpi-usd" id="comp-diff-usd">U$S 0</p></div>
-      <div class="glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Variación</p><h3 class="text-xl md:text-2xl font-bold" id="comp-pct">0%</h3><p class="kpi-usd" id="comp-pct-usd">0%</p></div>
+      <div class="kpi-fit glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1" id="comp-label1">Total Mes A</p><h3 class="text-xl md:text-2xl font-bold text-blue-600" id="comp-total1">$0</h3><p class="kpi-usd text-violet-600" id="comp-total1-usd">U$S 0</p></div>
+      <div class="kpi-fit glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1" id="comp-label2">Total Mes B</p><h3 class="text-xl md:text-2xl font-bold text-amber-600" id="comp-total2">$0</h3><p class="kpi-usd text-violet-600" id="comp-total2-usd">U$S 0</p></div>
+      <div class="kpi-fit glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Diferencia</p><h3 class="text-xl md:text-2xl font-bold" id="comp-diff">$0</h3><p class="kpi-usd" id="comp-diff-usd">U$S 0</p></div>
+      <div class="kpi-fit glass-panel rounded-2xl p-5 text-center"><p class="text-xs text-slate-500 mb-1">Variación</p><h3 class="text-xl md:text-2xl font-bold" id="comp-pct">0%</h3><p class="kpi-usd" id="comp-pct-usd">0%</p></div>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="glass-panel rounded-2xl p-6"><h3 class="font-bold mb-4">Comparación</h3><canvas id="chart-comp-barras" height="280"></canvas></div>
@@ -302,9 +302,9 @@
   <!-- ==================== PRESUPUESTO ==================== -->
   <div id="section-presupuesto" class="hidden fade-in space-y-6">
     <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-md"><p class="text-indigo-100 text-xs">Costo Fijo Mensual</p><h3 class="text-xl md:text-3xl font-bold" id="presup-fijo-ars">$0</h3><p class="kpi-usd text-indigo-100" id="presup-fijo-usd">U$S 0</p></div>
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-md"><p class="text-teal-100 text-xs">A pagar en <span id="presup-caja-mes">—</span></p><h3 class="text-xl md:text-3xl font-bold" id="presup-caja-ars">$0</h3><p class="kpi-usd text-teal-100" id="presup-caja-usd">U$S 0</p></div>
-      <div class="rounded-2xl p-5 bg-gradient-to-br from-slate-600 to-slate-700 text-white shadow-md"><p class="text-slate-200 text-xs">Ítems</p><h3 class="text-xl md:text-3xl font-bold" id="presup-items">0</h3><p class="kpi-usd text-slate-200" id="presup-items-sub">ítems activos</p></div>
+      <div class="kpi-fit rounded-2xl p-5 bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-md"><p class="text-indigo-100 text-xs">Costo Fijo Mensual</p><h3 class="text-xl md:text-3xl font-bold" id="presup-fijo-ars">$0</h3><p class="kpi-usd text-indigo-100" id="presup-fijo-usd">U$S 0</p></div>
+      <div class="kpi-fit rounded-2xl p-5 bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-md"><p class="text-teal-100 text-xs">A pagar en <span id="presup-caja-mes">—</span></p><h3 class="text-xl md:text-3xl font-bold" id="presup-caja-ars">$0</h3><p class="kpi-usd text-teal-100" id="presup-caja-usd">U$S 0</p></div>
+      <div class="kpi-fit rounded-2xl p-5 bg-gradient-to-br from-slate-600 to-slate-700 text-white shadow-md"><p class="text-slate-200 text-xs">Ítems</p><h3 class="text-xl md:text-3xl font-bold" id="presup-items">0</h3><p class="kpi-usd text-slate-200" id="presup-items-sub">ítems activos</p></div>
     </div>
 
     <!-- Panel de detección automática -->
