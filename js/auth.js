@@ -4,6 +4,7 @@
 ======================================== */
 import { $, S, sb, STORAGE_KEYS, registry } from './state.js';
 import { modalConfirm } from './ui.js';
+import { resetHogar } from './hogar.js';
 
 export function showAuth() { $('auth-overlay').classList.remove('hidden'); showAuthMode('login'); }
 export function hideAuth() { $('auth-overlay').classList.add('hidden'); $('auth-error').classList.add('hidden'); $('auth-success').classList.add('hidden'); }
@@ -66,6 +67,8 @@ export async function doLogout() {
   localStorage.removeItem(STORAGE_KEYS.dataCache);
   localStorage.removeItem(STORAGE_KEYS.cacheMeta);
   localStorage.removeItem(STORAGE_KEYS.pendingQueue);
+  localStorage.removeItem(STORAGE_KEYS.ingresosCache);
+  resetHogar();
   showAuth();
 }
 

@@ -5,6 +5,7 @@
 import { $, S, sb, registry, MONEDA_DEFAULT } from './state.js';
 import { safeNumber, formatearNumero, formatImporte, localDateStr, localMesStr, getMesKey, uniqueSorted, escapeHtml, escapeAttr, formatMesLabel, enqueueOperation, saveCache, debounce, showLoading, buildDismissalsMap, addDismissal, clearDismissalsForKey, evalExpresion } from './utils.js';
 import { toast, toastWarn, toastError, modalConfirm } from './ui.js';
+import { tieneHogar, libroCarga, libroPersonalPropio, renderLibroCarga } from './hogar.js';
 import { pendientesDelMes, detectadosSinPresupuestar, presupuestarDetectado, itemsActivos, itemsSinAncla, avanceFijosDelMes, FRECUENCIAS } from './presupuesto.js';
 
 function fijoKey(concepto, centro, moneda) {
@@ -23,6 +24,38 @@ export function setMoneda(m) {
   S.formDirty = true;
 }
 
+/* ── Modo de carga: gasto o ingreso ──
+   Los ingresos no tienen tipo Fijo/Variable; el centro es el origen
+   (Pacientes, Alquileres…) y el método es la cuenta donde entró. */
+export function setModoCarga(modo) {
+  if (S.editingId && modo !== S.modoCarga) return;
+  S.modoCarga = (modo === 'ingreso' && tieneHogar()) ? 'ingreso' : 'gasto';
+  const ing = S.modoCarga === 'ingreso';
+  document.querySelectorAll('.modo-btn').forEach(b => b.classList.toggle('modo-btn-active', b.dataset.modo === S.modoCarga));
+  $('tipo-wrap')?.classList.toggle('hidden', ing);
+  if ($('carga-titulo')) $('carga-titulo').textContent = ing ? 'Cargar Ingreso' : 'Cargar Gasto';
+  if ($('centro-label')) $('centro-label').textContent = ing ? 'Origen del ingreso' : 'Centro de Gasto';
+  if ($('metodo-label')) $('metodo-label').textContent = ing ? 'Cuenta / medio' : 'Método de Pago';
+  if (!S.editingId) {
+    $('btn-guardar').className = `flex-1 ${ing ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'} text-white font-bold py-3 rounded-lg transition-all`;
+  }
+  actualizarCentrosCarga();
+}
+
+/* Centros sugeridos según el modo y el libro donde se carga. */
+export function actualizarCentrosCarga() {
+  const lista = $('centros-list'); if (!lista) return;
+  const libro = libroCarga();
+  let centros;
+  if (S.modoCarga === 'ingreso') {
+    centros = uniqueSorted(S.ingresosTodos.filter(i => !libro || i.Libro === libro).map(i => i.Centro));
+  } else {
+    const deLibro = tieneHogar() ? S.gastosTodos.filter(g => g.Libro === libro) : S.allData;
+    centros = uniqueSorted([...deLibro.map(g => g.Centro), ...(libro === libroPersonalPropio() || !tieneHogar() ? S.dbCentros : [])]);
+  }
+  lista.innerHTML = centros.map(c => `<option value="${escapeAttr(c)}">`).join('');
+}
+
 function getMonedaForm() {
   return $('moneda')?.value === 'USD' ? 'USD' : 'ARS';
 }
@@ -38,6 +71,7 @@ export function evaluarImporteOnBlur() {
 }
 
 export async function guardarGasto() {
+  if (S.modoCarga === 'ingreso') return guardarIngreso();
   const btn = $('btn-guardar');
   const importeEval = evalExpresion($('importe').value);
   if (Number.isNaN(importeEval)) { toastWarn('Importe inválido. Usá números y operadores + - * / (ej: 100+50)'); return; }
@@ -45,7 +79,7 @@ export async function guardarGasto() {
   const record = {
     Fecha: $('fecha').value, Centro: $('centro').value.trim(), Tipo: $('tipo').value,
     Concepto: $('concepto').value.trim(), Metodo: $('metodo').value, Importe: importeEval,
-    Moneda: getMonedaForm()
+    Moneda: getMonedaForm(), Libro: libroCarga()
   };
   if (!record.Fecha || !record.Centro || !record.Concepto || record.Importe === 0) { toastWarn('Completá los campos (importe no puede ser cero)'); return; }
 
@@ -54,7 +88,7 @@ export async function guardarGasto() {
     const conceptoLow = record.Concepto.toLowerCase(), centroLow = record.Centro.toLowerCase();
     const repetibles = ['transferencia','transfer','envío','envio','retiro','carga'];
     const esRepetible = repetibles.some(r => conceptoLow.includes(r));
-    const dupes = S.allData.filter(g => g.Fecha && g.Fecha.startsWith(mesFecha) && (g.Concepto||'').toLowerCase() === conceptoLow && (g.Centro||'').toLowerCase() === centroLow && (g.Moneda || 'ARS') === record.Moneda);
+    const dupes = (tieneHogar() ? S.gastosTodos.filter(g => g.Libro === record.Libro && g.Estado !== 'rechazado') : S.allData).filter(g => g.Fecha && g.Fecha.startsWith(mesFecha) && (g.Concepto||'').toLowerCase() === conceptoLow && (g.Centro||'').toLowerCase() === centroLow && (g.Moneda || 'ARS') === record.Moneda);
     if (dupes.length > 0) {
       const importesDupes = dupes.map(d => formatImporte(d.Importe, d.Moneda || 'ARS')).join(', ');
       const msg = esRepetible
@@ -73,7 +107,7 @@ export async function guardarGasto() {
       const { error } = await sb.from('gastos').update({ fecha: record.Fecha, centro: record.Centro, tipo: record.Tipo, concepto: record.Concepto, metodo: record.Metodo, importe: record.Importe, moneda: record.Moneda }).eq('id', S.editingId);
       if (error) throw error;
     } else {
-      const { error } = await sb.from('gastos').insert({ user_id: S.currentUserId, fecha: record.Fecha, centro: record.Centro, tipo: record.Tipo, concepto: record.Concepto, metodo: record.Metodo, importe: record.Importe, moneda: record.Moneda });
+      const { error } = await sb.from('gastos').insert({ user_id: S.currentUserId, libro_id: record.Libro, fecha: record.Fecha, centro: record.Centro, tipo: record.Tipo, concepto: record.Concepto, metodo: record.Metodo, importe: record.Importe, moneda: record.Moneda });
       if (error) throw error;
     }
     const wasEdit = !!S.editingId;
@@ -84,23 +118,88 @@ export async function guardarGasto() {
   } catch (e) {
     if (S.editingId) {
       enqueueOperation({ action: 'update', payload: { id: S.editingId, record } });
-      const idx = S.allData.findIndex(x => x.ID === S.editingId);
-      if (idx >= 0) S.allData[idx] = { ...S.allData[idx], ...record, _pending: true };
+      const { Libro, ...cambios } = record;
+      for (const arr of [S.allData, S.gastosTodos]) {
+        const idx = arr.findIndex(x => x.ID === S.editingId);
+        if (idx >= 0) arr[idx] = { ...arr[idx], ...cambios, _pending: true };
+      }
       toastWarn('Sin conexión. Edición en cola.');
     } else {
       enqueueOperation({ action: 'add', payload: { data: record } });
-      S.allData.unshift({ ...record, ID: 'local-' + Date.now(), _pending: true });
+      const local = { ...record, ID: 'local-' + Date.now(), User: S.currentUserId, Estado: 'aprobado', _pending: true };
+      S.gastosTodos.unshift(local);
+      if (S.allData !== S.gastosTodos) S.allData.unshift(local);
       clearDismissalsForKey(fijoKey(record.Concepto, record.Centro, record.Moneda));
       toastWarn('Sin conexión. Gasto guardado localmente.');
     }
-    saveCache(S.allData); procesarPatrones(); actualizarSugerencias(); actualizarResumen();
+    saveCache(S.gastosTodos); procesarPatrones(); actualizarSugerencias(); actualizarResumen();
     registry.renderHistorial?.();
     limpiarFormulario();
   } finally { btn.disabled = false; btn.innerHTML = prevHtml; showLoading(false); }
 }
 
-export function limpiarFormulario() {
+/* Los ingresos requieren conexión: no pasan por la cola offline. */
+async function guardarIngreso() {
+  const btn = $('btn-guardar');
+  const importe = evalExpresion($('importe').value);
+  if (!Number.isFinite(importe) || importe === 0) { toastWarn('Importe inválido'); return; }
+  const fila = {
+    fecha: $('fecha').value, centro: $('centro').value.trim(), concepto: $('concepto').value.trim(),
+    metodo: $('metodo').value || null, importe, moneda: getMonedaForm()
+  };
+  if (!fila.fecha || !fila.centro || !fila.concepto) { toastWarn('Completá fecha, origen y concepto'); return; }
+  if (!navigator.onLine) { toastWarn('Necesitás conexión para cargar ingresos'); return; }
+  const prevHtml = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>Guardando';
+  showLoading(true);
+  try {
+    const wasEdit = !!S.editingId;
+    const { error } = wasEdit
+      ? await sb.from('ingresos').update(fila).eq('id', S.editingId)
+      : await sb.from('ingresos').insert({ ...fila, user_id: S.currentUserId, libro_id: libroCarga() });
+    if (error) throw error;
+    limpiarFormulario(); await registry.cargarDatos?.();
+    if (navigator.vibrate) navigator.vibrate(50);
+    toast(wasEdit ? '¡Ingreso actualizado!' : '¡Ingreso guardado!');
+  } catch (e) { toastError(e.message); }
+  finally { btn.disabled = false; btn.innerHTML = prevHtml; showLoading(false); }
+}
+
+export function editarIngreso(id) {
+  const i = S.ingresosTodos.find(x => x.ID === id); if (!i) return;
   S.editingId = null;
+  setModoCarga('ingreso');
+  S.editingId = id; S.editingTabla = 'ingresos';
+  $('fecha').value = i.Fecha || ''; $('centro').value = i.Centro || ''; $('concepto').value = i.Concepto || '';
+  $('metodo').value = i.Metodo || ''; $('importe').value = i.Importe || '';
+  setMoneda(i.Moneda || 'ARS');
+  marcarEdicion();
+  registry.showTab?.('carga');
+}
+
+export async function borrarIngreso(id, concepto) {
+  if (!await modalConfirm(`¿Borrar el ingreso "${concepto}"?`)) return;
+  showLoading(true);
+  try {
+    const { error } = await sb.from('ingresos').delete().eq('id', id);
+    if (error) throw error;
+    await registry.cargarDatos?.(); toast('Borrado');
+  } catch (e) { toastError(e.message); }
+  finally { showLoading(false); }
+}
+
+/* Pone el formulario en modo edición (botón ámbar, cancelar visible, sin selector de libro). */
+export function marcarEdicion() {
+  $('btn-guardar').innerHTML = '<i class="fas fa-check mr-2"></i>Actualizar';
+  $('btn-guardar').className = 'flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-lg transition-all';
+  $('btn-cancelar').classList.remove('hidden');
+  $('edit-indicator').classList.remove('hidden');
+  $('libro-carga-wrap')?.classList.add('hidden');
+  S.formDirty = true;
+}
+
+export function limpiarFormulario() {
+  S.editingId = null; S.editingTabla = 'gastos';
   $('concepto').value = ''; $('importe').value = '';
   setMoneda(MONEDA_DEFAULT);
   $('avg-suggestion')?.classList.add('hidden');
@@ -109,6 +208,8 @@ export function limpiarFormulario() {
   $('btn-cancelar').classList.add('hidden');
   $('edit-indicator').classList.add('hidden');
   S.formDirty = false;
+  setModoCarga(S.modoCarga);
+  renderLibroCarga();
 }
 
 export function cancelarEdicion() {
@@ -155,7 +256,7 @@ export function procesarPatrones() {
   const metodos = uniqueSorted([...metodosSet, ...S.dbMetodos]);
   const meses = [...mesesSet].sort();
 
-  $('centros-list').innerHTML = centros.map(c=>`<option value="${escapeAttr(c)}">`).join('');
+  actualizarCentrosCarga();
   $('filtro-centro').innerHTML = '<option value="todos">Todos los centros</option>' + centros.map(c=>`<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
   $('filtro-metodo').innerHTML = '<option value="todos">Todos los métodos</option>' + metodos.map(m=>`<option value="${escapeAttr(m)}">${escapeHtml(m)}</option>`).join('');
   $('filtro-mes-historial').innerHTML = '<option value="todos">Todos los meses</option>' + meses.map(m=>`<option value="${escapeAttr(m)}">${escapeHtml(m)}</option>`).join('');
@@ -309,7 +410,7 @@ export async function guardarFijoRapido(concepto, centro, tipo, metodo, importe,
   const m = moneda === 'USD' ? 'USD' : 'ARS';
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
   try {
-    const { error } = await sb.from('gastos').insert({ user_id: S.currentUserId, fecha, centro, tipo, concepto, metodo, importe, moneda: m });
+    const { error } = await sb.from('gastos').insert({ user_id: S.currentUserId, libro_id: libroPersonalPropio(), fecha, centro, tipo, concepto, metodo, importe, moneda: m });
     if (error) throw error;
     clearDismissalsForKey(fijoKey(concepto, centro, m));
     btn.innerHTML = '<i class="fas fa-check"></i>';

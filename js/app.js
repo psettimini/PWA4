@@ -7,9 +7,10 @@ import { setFechaHoy, updateCacheLabel, updatePendingBadge, updateNetworkStatus,
 import { initDarkMode, showTab, showUpdateBanner, dismissUpdateBanner, toast, toastWarn, toggleDarkMode } from './ui.js';
 import { showAuth, hideAuth, showAuthMode, doLogin, doRegister, doResetPassword, doLogout, loadUserProfile, applyRoleUI } from './auth.js';
 import { cargarDatos, syncPendingQueue } from './data.js';
-import { guardarGasto, cancelarEdicion, borrarGasto, procesarPatrones, actualizarSugerencias, actualizarResumen, seleccionarPatron, seleccionarFijo, guardarFijoRapido, filtrarSugerencias, mostrarSugerenciasDebounced, navegarSugerencias, setMoneda, dismissFijoPendiente, evaluarImporteOnBlur, toggleDetectadosCarga, presupuestarDetectadoCarga } from './carga.js';
+import { guardarGasto, cancelarEdicion, borrarGasto, procesarPatrones, actualizarSugerencias, actualizarResumen, seleccionarPatron, seleccionarFijo, guardarFijoRapido, filtrarSugerencias, mostrarSugerenciasDebounced, navegarSugerencias, setMoneda, dismissFijoPendiente, evaluarImporteOnBlur, toggleDetectadosCarga, presupuestarDetectadoCarga, setModoCarga, actualizarCentrosCarga, editarIngreso, borrarIngreso } from './carga.js';
 import { renderHistorial, filtrarHistorial, filtrarHistorialDebounced, limpiarFiltros, exportarHistorialFiltrado, exportarCSV, editarGasto, cargarMasHistorial } from './historial.js';
-import { renderDashboard, renderEvolucionCentro, renderEvolucionConcepto } from './dashboard.js';
+import { renderDashboard, renderEvolucionCentro, renderEvolucionConcepto, renderFlujo } from './dashboard.js';
+import { setLibroActivo, renderSelectorLibro, renderBandeja, renderLibroCarga, irABandeja, aprobarMovimiento, rechazarMovimiento, aprobarTodos, cancelarPendiente, abrirPase, resetHogar } from './hogar.js';
 import { initComparar, renderComparar } from './comparar.js';
 import { renderPresupuesto, presupDetectar, presupToggleDetectado, presupTodosDetectados, presupEditarDetectado,
          presupCancelarDeteccion, presupConfirmarDeteccion, presupEditarImporte, presupEditarFrecuencia,
@@ -21,7 +22,12 @@ import { abrirImportador, cerrarImportador, aprobarImportacion, descartarTodo, s
 registry.cargarDatos = cargarDatos;
 registry.showTab = showTab;
 registry.renderHistorial = renderHistorial;
+registry.renderBandeja = renderBandeja;
 registry.refreshUI = () => {
+  renderSelectorLibro();
+  renderBandeja();
+  renderLibroCarga();
+  setModoCarga(S.modoCarga);
   procesarPatrones();
   restoreHistoryFilters();
   actualizarSugerencias();
@@ -57,6 +63,18 @@ const clickActions = {
   dismissFijoPendiente: (d, e) => { e.stopPropagation(); dismissFijoPendiente(d.concepto, d.centro, d.moneda); },
   toggleDetectadosCarga: () => toggleDetectadosCarga(),
   presupuestarDetectado: (d, e) => { e.stopPropagation(); presupuestarDetectadoCarga(d.key); },
+  setModoCarga: (d) => setModoCarga(d.modo),
+  /* Hogar: libros, aprobación, pases */
+  setLibroActivo: (d) => setLibroActivo(d.libro),
+  irABandeja: () => irABandeja(),
+  aprobarMovimiento: (d) => aprobarMovimiento(d.tabla, d.id),
+  rechazarMovimiento: (d) => rechazarMovimiento(d.tabla, d.id),
+  aprobarTodos: () => aprobarTodos(),
+  cancelarPendiente: (d) => cancelarPendiente(d.tabla, d.id),
+  editarPendiente: (d) => d.tabla === 'ingresos' ? editarIngreso(d.id) : editarGasto(d.id),
+  abrirPase: (d, e) => { e.stopPropagation(); abrirPase(d.id); },
+  editarIngreso: (d) => editarIngreso(d.id),
+  borrarIngreso: (d) => borrarIngreso(d.id, d.concepto),
   /* Historial */
   editarGasto: (d) => editarGasto(d.id),
   borrarGasto: (d) => borrarGasto(d.id, d.concepto),
@@ -114,6 +132,8 @@ const changeActions = {
   filtrarHistorial: () => filtrarHistorial(),
   renderComparar: () => renderComparar(),
   renderDashboard: () => renderDashboard(),
+  renderFlujo: () => renderFlujo(),
+  cambiarLibroCarga: () => actualizarCentrosCarga(),
   renderEvolucionCentro: () => renderEvolucionCentro(),
   renderEvolucionConcepto: () => renderEvolucionConcepto(),
   /* Presupuesto — reciben (dataset, event, elemento) */
@@ -165,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[Auth]', event, session ? session.user.email : 'no session');
     if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
       if (S.currentUserId) {
-        S.currentUserId = null; S.allData = []; S.dbCentros = []; S.dbMetodos = [];
+        S.currentUserId = null; S.allData = []; S.dbCentros = []; S.dbMetodos = []; resetHogar();
         toastWarn('Sesión finalizada');
         showAuth();
       }

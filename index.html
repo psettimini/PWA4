@@ -101,6 +101,9 @@
 <!-- Viewer banner (solo visible en modo solo-lectura) -->
 <div class="viewer-banner"><i class="fas fa-eye mr-2"></i>Modo solo lectura — los cambios están deshabilitados</div>
 
+<!-- Selector de libro (solo usuarios con hogar) -->
+<div id="libro-selector" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3"></div>
+
 <div id="app-status-bar" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3">
   <div class="glass-panel rounded-2xl px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
     <div class="flex items-center gap-2"><span id="network-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span><span id="network-label" class="font-medium">Listo</span></div>
@@ -116,16 +119,24 @@
 
   <!-- ==================== CARGA ==================== -->
   <div id="section-carga" class="fade-in">
+    <div id="bandeja-pendientes" class="hidden glass-panel rounded-2xl p-6 mb-6"></div>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div class="lg:col-span-2 glass-panel rounded-2xl p-6">
         <div class="flex items-center justify-between mb-6 gap-3 flex-wrap">
-          <h2 class="text-2xl font-bold">Cargar Gasto</h2>
+          <div class="flex items-center gap-3 flex-wrap">
+            <h2 id="carga-titulo" class="text-2xl font-bold">Cargar Gasto</h2>
+            <div class="modo-toggle hogar-only" role="group" aria-label="Tipo de movimiento">
+              <button type="button" data-action="setModoCarga" data-modo="gasto" class="modo-btn modo-btn-active">Gasto</button>
+              <button type="button" data-action="setModoCarga" data-modo="ingreso" class="modo-btn">Ingreso</button>
+            </div>
+          </div>
           <button type="button" data-action="abrirImportador" id="btn-importar" class="owner-only px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-colors"><i class="fas fa-file-import mr-2"></i>Importar resumen</button>
         </div>
         <form class="space-y-4">
+          <div id="libro-carga-wrap" class="hidden"><label for="libro-carga" class="block text-sm font-medium text-slate-700 mb-1">Libro</label><select id="libro-carga" data-change="cambiarLibroCarga" class="w-full px-4 py-2 rounded-lg border border-slate-300"></select></div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 grid-form">
             <div><label for="fecha" class="block text-sm font-medium text-slate-700 mb-1">Fecha</label><input type="date" id="fecha" required class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500" style="width:100%;max-width:100%;box-sizing:border-box"></div>
-            <div><label for="centro" class="block text-sm font-medium text-slate-700 mb-1">Centro de Gasto</label><input type="text" id="centro" list="centros-list" required class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500"><datalist id="centros-list"></datalist></div>
+            <div><label for="centro" id="centro-label" class="block text-sm font-medium text-slate-700 mb-1">Centro de Gasto</label><input type="text" id="centro" list="centros-list" required class="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500"><datalist id="centros-list"></datalist></div>
           </div>
           <div class="relative">
             <label for="concepto" class="block text-sm font-medium text-slate-700 mb-1">Concepto</label>
@@ -133,8 +144,8 @@
             <div id="suggestions" class="suggestions hidden"></div>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 grid-form">
-            <div><label for="tipo" class="block text-sm font-medium text-slate-700 mb-1">Tipo</label><select id="tipo" class="w-full px-4 py-2 rounded-lg border border-slate-300"><option value="F">Fijo</option><option value="V">Variable</option></select></div>
-            <div class="md:col-span-2 md-col-span-2"><label for="metodo" class="block text-sm font-medium text-slate-700 mb-1">Método de Pago</label><select id="metodo" class="w-full px-4 py-2 rounded-lg border border-slate-300"><option value="Efectivo">Efectivo</option></select></div>
+            <div id="tipo-wrap"><label for="tipo" class="block text-sm font-medium text-slate-700 mb-1">Tipo</label><select id="tipo" class="w-full px-4 py-2 rounded-lg border border-slate-300"><option value="F">Fijo</option><option value="V">Variable</option></select></div>
+            <div class="md:col-span-2 md-col-span-2"><label for="metodo" id="metodo-label" class="block text-sm font-medium text-slate-700 mb-1">Método de Pago</label><select id="metodo" class="w-full px-4 py-2 rounded-lg border border-slate-300"><option value="Efectivo">Efectivo</option></select></div>
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
@@ -206,6 +217,20 @@
 
   <!-- ==================== DASHBOARD ==================== -->
   <div id="section-dashboard" class="hidden fade-in space-y-6">
+    <!-- Flujo del mes (ingresos − egresos) del libro activo -->
+    <div id="dash-flujo" class="hidden glass-panel rounded-2xl p-6">
+      <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <h3 class="font-bold"><i class="fas fa-scale-balanced text-emerald-600 mr-2"></i>Flujo del mes · <span id="flujo-titulo"></span></h3>
+        <select id="flujo-mes" data-change="renderFlujo" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm font-medium"></select>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+        <div class="rounded-2xl p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md"><p class="text-emerald-100 text-xs">Ingresos</p><h3 class="text-xl md:text-2xl font-bold" id="flujo-ingresos">$0</h3><p class="kpi-usd text-emerald-100" id="flujo-ingresos-usd">U$S 0</p></div>
+        <div class="rounded-2xl p-5 bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-md"><p class="text-rose-100 text-xs">Egresos</p><h3 class="text-xl md:text-2xl font-bold" id="flujo-egresos">$0</h3><p class="kpi-usd text-rose-100" id="flujo-egresos-usd">U$S 0</p></div>
+        <div id="flujo-saldo-card" class="flujo-saldo rounded-2xl p-5 text-white shadow-md"><p class="text-xs opacity-80">Saldo</p><h3 class="text-xl md:text-2xl font-bold" id="flujo-saldo">$0</h3><p class="kpi-usd opacity-80" id="flujo-saldo-usd">U$S 0</p></div>
+      </div>
+      <h4 class="text-sm font-semibold mb-2" style="color:var(--text2)">Ingresos del mes</h4>
+      <div id="flujo-lista" class="space-y-2 max-h-80 overflow-y-auto"></div>
+    </div>
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       <div class="rounded-2xl p-5 bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md"><p class="text-blue-100 text-xs">Mes Actual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-mes-actual">$0</h3><p class="kpi-usd text-blue-100" id="dash-mes-actual-usd">U$S 0</p></div>
       <div class="rounded-2xl p-5 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md"><p class="text-emerald-100 text-xs">Promedio Mensual</p><h3 class="text-xl md:text-3xl font-bold" id="dash-promedio">$0</h3><p class="kpi-usd text-emerald-100" id="dash-promedio-usd">U$S 0</p></div>

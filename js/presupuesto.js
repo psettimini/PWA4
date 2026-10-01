@@ -9,6 +9,7 @@
    mes cayó dos veces no distorsiona la comparación.
 ======================================== */
 import { $, S, sb, STORAGE_KEYS, registry } from './state.js';
+import { gastosPropios } from './hogar.js';
 import { safeNumber, formatImporte, formatImporteSigned, localMesStr, getMesKey,
          formatMesLabel, escapeHtml, escapeAttr, showLoading } from './utils.js';
 import { toast, toastError, toastWarn, modalConfirm } from './ui.js';
@@ -117,7 +118,7 @@ export function detectarFijos() {
   const mesActual = localMesStr();
 
   const grupos = new Map();
-  for (const g of S.allData) {
+  for (const g of gastosPropios()) {
     if (g.Tipo !== 'F' || !g.Fecha) continue;
     const mes = getMesKey(g.Fecha);
     if (mes < desdeKey) continue;
@@ -193,7 +194,7 @@ export function detectarFijos() {
    otros dos meses, y un anual aparece una vez al año en su mes. */
 function clavesCargadasEn(mesKey) {
   const set = new Set();
-  for (const g of S.allData) {
+  for (const g of gastosPropios()) {
     if (g.Fecha && g.Fecha.startsWith(mesKey)) set.add(`${g.Concepto}|${g.Centro}|${g.Moneda || 'ARS'}`);
   }
   return set;
@@ -201,7 +202,7 @@ function clavesCargadasEn(mesKey) {
 
 function ultimoPagoPorClave() {
   const map = new Map();
-  for (const g of S.allData) {
+  for (const g of gastosPropios()) {
     if (!g.Fecha) continue;
     const k = `${g.Concepto}|${g.Centro}|${g.Moneda || 'ARS'}`;
     const prev = map.get(k);

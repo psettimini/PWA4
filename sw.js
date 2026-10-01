@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'gastos-pwa-v2.10.0';
+const CACHE_VERSION = 'gastos-pwa-v3.0.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const CDN_CACHE = `${CACHE_VERSION}-cdn`;
@@ -19,6 +19,7 @@ const APP_SHELL = [
   'js/comparar.js',
   'js/presupuesto.js',
   'js/abm.js',
+  'js/hogar.js',
   'js/app.js',
   'js/importar/index.js',
   'js/importar/normalizar.js',

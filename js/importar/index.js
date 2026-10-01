@@ -4,6 +4,10 @@
 ======================================== */
 import { $, S, STORAGE_KEYS, registry } from '../state.js';
 import { evalExpresion, showLoading } from '../utils.js';
+import { gastosDeLibro, libroCarga } from '../hogar.js';
+
+/* Los duplicados y centros se miran contra el libro donde se importa, no contra la vista activa. */
+const gastosDestino = () => gastosDeLibro(libroCarga());
 import { toast, toastError, toastWarn, modalConfirm } from '../ui.js';
 import { leerArchivo } from './parsers/fuentes.js';
 import { cargarXlsx } from './parsers/libs.js';
@@ -80,7 +84,7 @@ function ejecutarParser(origen, lineas, filas, opts) {
 /* ── Lectura de un archivo ── */
 async function procesarArchivo(file, origenForzado, onEstado, cancelado = () => false) {
   const nombre = (file.name || '').toLowerCase();
-  const centros = [...new Set(S.allData.map(g => g.Centro).filter(Boolean))];
+  const centros = [...new Set(gastosDestino().map(g => g.Centro).filter(Boolean))];
 
   if (/\.xlsx?$/.test(nombre) || origenForzado === 'macro-debito') {
     onEstado?.('Leyendo planilla…', 0);
@@ -100,7 +104,7 @@ async function procesarArchivo(file, origenForzado, onEstado, cancelado = () => 
 /* ── Clasificación + dedup ── */
 function preparar(movs) {
   const memoria = getMemoria();
-  const centros = [...new Set(S.allData.map(g => g.Centro).filter(Boolean))];
+  const centros = [...new Set(gastosDestino().map(g => g.Centro).filter(Boolean))];
   for (const m of movs) {
     m.id = `imp-${++seq}`;
     const c = clasificar(m, S.patrones, { memoria, centroSugerido: m.centroSugerido });
@@ -111,7 +115,7 @@ function preparar(movs) {
     m.fuente = c.fuente;
     if (!m.centro && m.centroSugerido && centros.includes(m.centroSugerido)) m.centro = m.centroSugerido;
   }
-  anotarDuplicados(movs, S.allData);
+  anotarDuplicados(movs, gastosDestino());
 
   /* Si el movimiento matchea uno ya cargado, esa fila es la mejor fuente de
      clasificación que hay: ya la corregiste vos. Se adopta cuando el
@@ -181,7 +185,7 @@ function restaurarBorrador() {
    se respeta lo que ya habías marcado. */
 function anotarDuplicadosPreservando(movs) {
   const marcas = new Map(movs.map(m => [m.id, m.incluir]));
-  anotarDuplicados(movs, S.allData);
+  anotarDuplicados(movs, gastosDestino());
   for (const m of movs) if (marcas.has(m.id)) m.incluir = marcas.get(m.id);
   return movs;
 }

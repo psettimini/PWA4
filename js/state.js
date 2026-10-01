@@ -7,7 +7,15 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 export const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export const S = {
-  allData: [],
+  allData: [],        // vista: gastos aprobados del libro activo
+  gastosTodos: [],     // todos los gastos visibles (todos los libros y estados)
+  ingresosTodos: [],
+  ingresos: [],        // vista: ingresos aprobados del libro activo
+  libros: [],
+  miembros: {},
+  libroActivo: null,   // id de libro, 'hogar' o null (usuario sin hogar)
+  modoCarga: 'gasto',  // 'gasto' | 'ingreso'
+  editingTabla: 'gastos',
   charts: {},
   suggestionIndex: -1,
   patrones: [],
@@ -28,13 +36,16 @@ export const S = {
 };
 
 export const HISTORIAL_PAGE_SIZE = 50;
-export const APP_VERSION = '2.10.0';
+export const APP_VERSION = '3.0.0';
 export const MONEDAS = ['ARS', 'USD'];
 export const MONEDA_DEFAULT = 'ARS';
 export const STORAGE_KEYS = {
   dark: 'gastos_dark',
-  dataCache: 'gastos_data_cache_v4',
-  cacheMeta: 'gastos_data_cache_meta_v4',
+  dataCache: 'gastos_data_cache_v5',
+  cacheMeta: 'gastos_data_cache_meta_v5',
+  ingresosCache: 'gastos_ingresos_cache_v1',
+  hogarCache: 'gastos_hogar_cache_v1',
+  libroActivo: 'gastos_libro_activo_v1',
   pendingQueue: 'gastos_pending_queue_v3',
   historyFilters: 'gastos_historial_filters_v2',
   dismissals: 'gastos_fijos_dismissed_v1',
@@ -53,4 +64,5 @@ export const registry = {
   onTabChange: null,
   showTab: null,
   renderPresupuesto: null,
+  renderBandeja: null,
 };

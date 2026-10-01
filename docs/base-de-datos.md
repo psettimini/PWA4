@@ -167,6 +167,20 @@ Dos funciones de apoyo resuelven eso en las políticas:
 | `gastos`, `centros`, `metodos_pago`, `presupuesto_fijos` | INSERT/UPDATE/DELETE | `auth.uid() = user_id AND current_user_role() = 'owner'` |
 | `profiles` | SELECT/UPDATE | `id = auth.uid()` |
 
+### Hogar compartido (v3.0.0)
+
+`gastos` ya no usa las políticas de arriba: las reemplazan `gastos select/insert/update/delete`, y `ingresos` tiene las mismas. Funciones de apoyo (security definer): `mis_hogares()`, `libro_visible(libro)`, `es_titular(libro)`.
+
+| Operación | Regla |
+|-----------|-------|
+| SELECT | lo propio, el owner de un viewer (modelo viejo) o cualquier libro de un hogar del que soy miembro |
+| INSERT | `user_id = auth.uid()` y: libro NULL (sin hogar), libro propio, o libro ajeno del hogar **solo con `estado = 'pendiente'`** |
+| UPDATE / DELETE | titular del libro, o quien cargó mientras siga `pendiente` (sin hogar: el dueño, como antes) |
+
+Triggers: `gastos_libro_default` (si no viene `libro_id`, usa el libro personal de quien carga) y `movimiento_guard` (no se puede cambiar `user_id`; solo el titular cambia `estado`). `hogares`, `hogar_miembros` y `libros` son de solo lectura para la app.
+
+**Pases:** el gasto origen queda en su libro con `pase_libro_id` = libro destino; en el destino se crea un ingreso (aporte) o un gasto (pago por cuenta) con `pase_origen_id`. La vista Hogar excluye el origen cuando el destino ya está aprobado, para no contar dos veces.
+
 **GRANTs explícitos:**  
 Desde el **30-oct-2026** Supabase deja de otorgar privilegios por default a los objetos nuevos del schema `public`. Toda tabla o vista nueva debe incluir sus `GRANT` explícitos (`authenticated`, `service_role` según corresponda) o PostgREST devuelve error `42501`.
 

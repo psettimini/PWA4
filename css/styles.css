@@ -262,3 +262,45 @@ body.import-abierto{overflow:hidden}
 .import-cob-fila{display:flex;justify-content:space-between;gap:.75rem;font-size:.82rem;padding:.15rem 0;border-bottom:1px dotted var(--border-solid)}
 .import-cob-fila span:first-child{color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .import-cob-fecha{font-weight:700;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* ── Hogar: libros, pills, bandeja de aprobación, pases ── */
+body:not(.con-hogar) .hogar-only{display:none!important}
+.libro-chip{display:inline-flex;align-items:center;white-space:nowrap;padding:.45rem .9rem;border-radius:999px;font-size:.85rem;font-weight:600;background:var(--surface-solid);color:var(--text2);border:1px solid var(--border-solid);cursor:pointer;transition:background .15s,color .15s}
+.libro-chip:hover{border-color:#93c5fd}
+.libro-chip-active{background:#2563eb;color:#fff;border-color:#2563eb}
+.dark .libro-chip-active{background:#3b82f6;border-color:#3b82f6}
+.libro-chip-alerta{background:#fef3c7;color:#92400e;border-color:#fcd34d}
+.dark .libro-chip-alerta{background:rgba(245,158,11,.18);color:#fcd34d;border-color:rgba(245,158,11,.4)}
+.pill-persona{display:inline-flex;align-items:center;margin-left:.35rem;font-size:.68rem;font-weight:700;line-height:1.2;padding:.12rem .5rem;border-radius:999px;color:var(--pc);background:color-mix(in srgb,var(--pc) 13%,transparent);border:1px solid color-mix(in srgb,var(--pc) 35%,transparent);vertical-align:middle}
+.dark .pill-persona{color:color-mix(in srgb,var(--pc) 55%,#fff)}
+.pill-libro,.pill-pase,.pill-ingreso{display:inline-flex;align-items:center;margin-left:.35rem;font-size:.68rem;font-weight:600;line-height:1.2;padding:.12rem .5rem;border-radius:999px;vertical-align:middle;white-space:nowrap}
+.pill-libro{background:var(--pill-bg);color:var(--pill-text);border:1px solid var(--pill-border)}
+.pill-ingreso{margin:0 .4rem 0 0;background:#d1fae5;color:#047857}
+.pill-pase{background:#ede9fe;color:#6d28d9}
+.pill-pase-pendiente{background:#fef3c7;color:#92400e}
+.pill-pase-rechazado{background:#fee2e2;color:#b91c1c;text-decoration:line-through}
+.dark .pill-ingreso{background:rgba(16,185,129,.2);color:#6ee7b7}
+.dark .pill-pase{background:rgba(139,92,246,.22);color:#c4b5fd}
+.dark .pill-pase-pendiente{background:rgba(245,158,11,.2);color:#fcd34d}
+.dark .pill-pase-rechazado{background:rgba(239,68,68,.2);color:#fca5a5}
+.hist-pill-btn{cursor:pointer;color:#6d28d9;border-color:#c4b5fd}
+.bandeja-fila{display:flex;align-items:center;gap:.6rem;padding:.6rem .75rem;border-radius:.75rem;border:1px solid var(--border-solid);background:var(--kpi-bg)}
+.bandeja-btn{width:2.1rem;height:2.1rem;display:inline-flex;align-items:center;justify-content:center;border-radius:.5rem;font-size:.8rem;color:var(--text3);background:var(--surface-solid);border:1px solid var(--border-solid);cursor:pointer}
+.bandeja-btn:hover{color:#2563eb}
+.bandeja-btn-ok{background:#10b981;color:#fff;border-color:#10b981}
+.bandeja-btn-ok:hover{background:#059669;color:#fff}
+.bandeja-btn-no:hover{color:#dc2626;background:#fee2e2}
+.modo-toggle{display:inline-flex;gap:.25rem;background:var(--pill-bg);padding:.25rem;border-radius:.5rem;border:1px solid var(--pill-border)}
+.modo-btn{padding:.35rem .85rem;border-radius:.375rem;font-size:.85rem;font-weight:600;color:var(--text3);background:transparent;border:none;cursor:pointer}
+.modo-btn-active[data-modo="gasto"]{background:#2563eb;color:#fff}
+.modo-btn-active[data-modo="ingreso"]{background:#059669;color:#fff}
+.flujo-saldo{background:linear-gradient(135deg,#2563eb,#1d4ed8)}
+.flujo-saldo.flujo-negativo{background:linear-gradient(135deg,#ea580c,#c2410c)}
+.pase-box{max-width:24rem;text-align:left}
+.pase-label{display:block;font-size:.75rem;font-weight:600;color:var(--text3);margin:.75rem 0 .3rem}
+.pase-input{width:100%;padding:.55rem .75rem;border-radius:.6rem;border:1px solid var(--input-border);background:var(--input-bg);color:var(--text);font-size:.9rem}
+.pase-modos{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.pase-modos label{display:flex;gap:.5rem;align-items:flex-start;padding:.6rem;border-radius:.6rem;border:1px solid var(--border-solid);cursor:pointer;font-size:.85rem;color:var(--text2)}
+.pase-modos label:has(input:checked){border-color:#7c3aed;background:color-mix(in srgb,#7c3aed 8%,transparent)}
+.pase-modos small{color:var(--text3);font-size:.72rem}
+.modal-btn-ok.pase-ok{background:#7c3aed}

@@ -3,8 +3,49 @@
    dashboard.js
 ======================================== */
 import { $, S } from './state.js';
-import { safeNumber, formatearNumero, formatImporte, localMesStr, getMesKey, uniqueSorted, destroyChart, escapeHtml, escapeAttr, aggregateBy } from './utils.js';
+import { safeNumber, formatearNumero, formatImporte, localMesStr, getMesKey, uniqueSorted, destroyChart, escapeHtml, escapeAttr, aggregateBy, formatImporteSigned, formatFechaCorta } from './utils.js';
 import { costoFijoMensual } from './presupuesto.js';
+import { tieneHogar, pillsMovimiento, puedoEditar, libroPorId, HOGAR } from './hogar.js';
+
+/* ── Flujo del mes: ingresos, egresos y saldo del libro activo ── */
+function sumaMes(items, mes) {
+  const t = { ARS: 0, USD: 0 };
+  for (const m of items) if (m.Fecha && m.Fecha.startsWith(mes)) t[m.Moneda || 'ARS'] += safeNumber(m.Importe);
+  return t;
+}
+
+export function renderFlujo() {
+  const cont = $('dash-flujo'); if (!cont) return;
+  cont.classList.toggle('hidden', !tieneHogar());
+  if (!tieneHogar()) return;
+
+  const sel = $('flujo-mes');
+  const meses = uniqueSorted([...S.allData, ...S.ingresos].map(m => getMesKey(m.Fecha))).reverse();
+  const actual = localMesStr();
+  if (!meses.includes(actual)) meses.unshift(actual);
+  const elegido = meses.includes(sel.value) ? sel.value : actual;
+  sel.innerHTML = meses.map(m => `<option value="${escapeAttr(m)}">${escapeHtml(m)}</option>`).join('');
+  sel.value = elegido;
+
+  const ing = sumaMes(S.ingresos, elegido), egr = sumaMes(S.allData, elegido);
+  const kpi = (id, ars, usd) => {
+    $(id).textContent = formatImporteSigned(ars, 'ARS');
+    $(id + '-usd').textContent = formatImporteSigned(usd, 'USD');
+  };
+  kpi('flujo-ingresos', ing.ARS, ing.USD);
+  kpi('flujo-egresos', egr.ARS, egr.USD);
+  kpi('flujo-saldo', ing.ARS - egr.ARS, ing.USD - egr.USD);
+  $('flujo-saldo-card').classList.toggle('flujo-negativo', ing.ARS - egr.ARS < 0);
+  $('flujo-titulo').textContent = S.libroActivo === HOGAR ? 'Hogar' : (libroPorId(S.libroActivo)?.nombre || '');
+
+  const lista = S.ingresos.filter(i => i.Fecha && i.Fecha.startsWith(elegido)).sort((a, b) => (b.Fecha || '').localeCompare(a.Fecha || ''));
+  $('flujo-lista').innerHTML = lista.length ? lista.map(i => `<div class="bandeja-fila">
+      <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate">${escapeHtml(i.Concepto)}</div>
+      <div class="text-xs flex flex-wrap items-center gap-1 mt-0.5" style="color:var(--text3)">${formatFechaCorta(i.Fecha)} · ${escapeHtml(i.Centro)}${i.Metodo ? ' · ' + escapeHtml(i.Metodo) : ''} ${pillsMovimiento(i)}</div></div>
+      <div class="text-sm font-bold font-mono text-emerald-600 whitespace-nowrap">${formatImporteSigned(i.Importe, i.Moneda)}</div>
+      ${puedoEditar(i) ? `<div class="flex gap-1 owner-only"><button data-action="editarIngreso" data-id="${escapeAttr(i.ID)}" class="bandeja-btn" title="Editar"><i class="fas fa-pen"></i></button><button data-action="borrarIngreso" data-id="${escapeAttr(i.ID)}" data-concepto="${escapeAttr(i.Concepto)}" class="bandeja-btn bandeja-btn-no" title="Borrar"><i class="fas fa-trash"></i></button></div>` : ''}
+    </div>`).join('') : '<p class="text-sm italic" style="color:var(--text3)">Sin ingresos este mes</p>';
+}
 
 function computeStats(moneda) {
   const data = S.allData.filter(g => (g.Moneda || 'ARS') === moneda);
@@ -35,6 +76,7 @@ function setKpi(idAr, idUsd, ars, usd, formatter) {
 }
 
 export function renderDashboard() {
+  renderFlujo();
   const ars = computeStats('ARS');
   const usd = computeStats('USD');
 

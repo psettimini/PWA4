@@ -5,7 +5,11 @@
 import { $, S, sb, HISTORIAL_PAGE_SIZE, registry } from './state.js';
 import { escapeHtml, escapeAttr, formatearNumero, formatImporte, formatImporteSigned, formatFechaCorta, getDateGroupLabel, csvEscape, descargarCSV, safeNumber, debounce, persistHistoryFilters, showLoading } from './utils.js';
 import { toast, toastError, modalConfirm } from './ui.js';
-import { setMoneda } from './carga.js';
+import { setMoneda, setModoCarga, marcarEdicion } from './carga.js';
+import { pillsMovimiento, puedoEditar, esTitular, tieneHogar } from './hogar.js';
+
+/* Botón de pase: solo sobre gastos aprobados de un libro propio que todavía no se pasaron. */
+const puedePasar = g => tieneHogar() && esTitular(g.Libro) && !g.PaseLibro && !g.PaseOrigen && !g._pending;
 
 function getFiltrados() {
   const txt=($('buscar-historial')?.value||'').toLowerCase(), mes=$('filtro-mes-historial')?.value||'todos',
@@ -37,7 +41,7 @@ export function renderHistorial() {
     const isNeg = g.Importe < 0, impColor = isNeg ? 'text-red-500' : '';
     const moneda = g.Moneda || 'ARS';
     const monedaTag = moneda === 'USD' ? ' <span class="ml-1 text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full font-bold">U$S</span>' : '';
-    return `<tr class="hover:bg-slate-50"><td class="py-3 px-4">${escapeHtml(g.Fecha)||'-'}</td><td class="py-3 px-4 font-medium">${escapeHtml(g.Centro)}</td><td class="py-3 px-4">${escapeHtml(g.Concepto)}${monedaTag}${g._pending?' <span class="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Pendiente</span>':''}</td><td class="py-3 px-4"><span class="px-2 py-1 rounded text-xs ${g.Tipo==='F'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'}">${escapeHtml(g.Tipo)}</span></td><td class="py-3 px-4 text-xs text-slate-500">${escapeHtml(g.Metodo)}</td><td class="py-3 px-4 text-right font-mono ${impColor}">${formatImporteSigned(g.Importe, moneda)}</td><td class="py-3 px-4 text-center owner-only"><button data-action="editarGasto" data-id="${escapeAttr(g.ID)}" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button><button data-action="borrarGasto" data-id="${escapeAttr(g.ID)}" data-concepto="${escapeAttr(g.Concepto)}" class="text-red-600"><i class="fas fa-trash"></i></button></td></tr>`;
+    return `<tr class="hover:bg-slate-50"><td class="py-3 px-4">${escapeHtml(g.Fecha)||'-'}</td><td class="py-3 px-4 font-medium">${escapeHtml(g.Centro)}</td><td class="py-3 px-4">${escapeHtml(g.Concepto)}${monedaTag}${pillsMovimiento(g)}${g._pending?' <span class="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">Pendiente</span>':''}</td><td class="py-3 px-4"><span class="px-2 py-1 rounded text-xs ${g.Tipo==='F'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'}">${escapeHtml(g.Tipo)}</span></td><td class="py-3 px-4 text-xs text-slate-500">${escapeHtml(g.Metodo)}</td><td class="py-3 px-4 text-right font-mono ${impColor}">${formatImporteSigned(g.Importe, moneda)}</td><td class="py-3 px-4 text-center owner-only whitespace-nowrap">${puedePasar(g)?`<button data-action="abrirPase" data-id="${escapeAttr(g.ID)}" class="text-violet-600 mr-2" title="Registrar pase a otro libro"><i class="fas fa-right-left"></i></button>`:''}${puedoEditar(g)?`<button data-action="editarGasto" data-id="${escapeAttr(g.ID)}" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button><button data-action="borrarGasto" data-id="${escapeAttr(g.ID)}" data-concepto="${escapeAttr(g.Concepto)}" class="text-red-600"><i class="fas fa-trash"></i></button>`:''}</td></tr>`;
   }).join('');
   if (hasMore) tbody.innerHTML += `<tr><td colspan="7" class="py-4 text-center"><button data-action="cargarMasHistorial" class="px-6 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-200 transition-colors"><i class="fas fa-chevron-down mr-1"></i>Cargar más (${remaining} restantes)</button></td></tr>`;
 
@@ -51,7 +55,7 @@ export function renderHistorial() {
       const amountColor = isNeg ? 'text-red-500' : (g.Tipo==='F'?'text-emerald-700':'text-amber-700');
       const amountDisplay = formatImporteSigned(g.Importe, moneda);
       const monedaTag = moneda === 'USD' ? '<span class="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 font-bold">U$S</span>' : '';
-      html += `<div class="hist-swipe-wrapper"><div class="hist-swipe-bg"><div class="hist-swipe-bg-edit"><i class="fas fa-edit"></i> Editar</div><div class="hist-swipe-bg-delete">Borrar <i class="fas fa-trash"></i></div></div><div class="hist-card" data-id="${escapeAttr(g.ID)}" data-concepto="${escapeAttr(g.Concepto)}"><div class="hist-card-top"><div><div class="hist-card-title">${escapeHtml(g.Concepto)}${monedaTag}${g._pending?'<span class="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pendiente</span>':''}</div><div class="hist-card-sub">${formatFechaCorta(g.Fecha)} · ${escapeHtml(g.Centro)}</div></div><div class="hist-card-amount ${amountColor}">${amountDisplay}</div></div><div class="hist-card-meta"><span class="hist-pill">${g.Tipo==='F'?'Fijo':'Variable'}</span><span class="hist-pill">${escapeHtml(g.Metodo)}</span></div></div></div>`;
+      html += `<div class="hist-swipe-wrapper"><div class="hist-swipe-bg"><div class="hist-swipe-bg-edit"><i class="fas fa-edit"></i> Editar</div><div class="hist-swipe-bg-delete">Borrar <i class="fas fa-trash"></i></div></div><div class="hist-card" data-id="${escapeAttr(g.ID)}" data-concepto="${escapeAttr(g.Concepto)}" data-editable="${puedoEditar(g)?'1':''}"><div class="hist-card-top"><div><div class="hist-card-title">${escapeHtml(g.Concepto)}${monedaTag}${g._pending?'<span class="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pendiente</span>':''}</div><div class="hist-card-sub">${formatFechaCorta(g.Fecha)} · ${escapeHtml(g.Centro)}</div></div><div class="hist-card-amount ${amountColor}">${amountDisplay}</div></div><div class="hist-card-meta"><span class="hist-pill">${g.Tipo==='F'?'Fijo':'Variable'}</span><span class="hist-pill">${escapeHtml(g.Metodo)}</span>${pillsMovimiento(g)}${puedePasar(g)?`<button data-action="abrirPase" data-id="${escapeAttr(g.ID)}" class="hist-pill hist-pill-btn ml-auto" title="Registrar pase"><i class="fas fa-right-left mr-1"></i>Pase</button>`:''}</div></div></div>`;
     }
     if (hasMore) html += `<div class="text-center py-4"><button data-action="cargarMasHistorial" class="px-6 py-2.5 bg-blue-100 text-blue-700 rounded-xl text-sm font-semibold hover:bg-blue-200 transition-colors"><i class="fas fa-chevron-down mr-1"></i>Cargar más (${remaining})</button></div>`;
     mob.innerHTML = html;
@@ -77,16 +81,15 @@ export function exportarHistorialFiltrado() {
 }
 
 export function editarGasto(id) {
-  const g=S.allData.find(x=>x.ID===id); if(!g) return;
-  S.editingId = id;
+  const g=S.gastosTodos.find(x=>x.ID===id) || S.allData.find(x=>x.ID===id); if(!g) return;
+  if (!puedoEditar(g)) return;
+  S.editingId = null;
+  setModoCarga('gasto');
+  S.editingId = id; S.editingTabla = 'gastos';
   $('fecha').value=g.Fecha||''; $('centro').value=g.Centro||''; $('concepto').value=g.Concepto||'';
   $('tipo').value=g.Tipo||'V'; $('metodo').value=g.Metodo||'Efectivo'; $('importe').value=g.Importe||'';
   setMoneda(g.Moneda || 'ARS');
-  $('btn-guardar').innerHTML='<i class="fas fa-check mr-2"></i>Actualizar';
-  $('btn-guardar').className='flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-lg transition-all';
-  $('btn-cancelar').classList.remove('hidden');
-  $('edit-indicator').classList.remove('hidden');
-  S.formDirty = true;
+  marcarEdicion();
   registry.showTab?.('carga');
 }
 
@@ -103,7 +106,7 @@ function initSwipeCards() {
   const mob = $('historial-cards-mobile'); if (!mob || mob._swipeInit) return;
   mob._swipeInit = true;
   mob.addEventListener('touchstart', (e) => {
-    const card = e.target.closest('.hist-card[data-id]'); if (!card) return;
+    const card = e.target.closest('.hist-card[data-editable="1"]'); if (!card) return;
     _swipe.card = card; _swipe.startX = e.touches[0].clientX; _swipe.currentX = 0; card.classList.add('swiping');
   }, { passive: true });
   mob.addEventListener('touchmove', (e) => {

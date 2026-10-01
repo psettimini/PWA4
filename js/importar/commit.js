@@ -4,6 +4,7 @@
 ======================================== */
 import { S, sb } from '../state.js';
 import { aprender } from './clasificar.js';
+import { libroCarga } from '../hogar.js';
 
 /* Da de alta en el catálogo los métodos de pago que todavía no estén.
    No pisa los existentes: el importador mapea a los nombres en uso. */
@@ -24,8 +25,10 @@ export async function commitImportacion(movs) {
 
   await asegurarMetodos(aprobados.map(m => m.metodo));
 
+  const libro_id = libroCarga();
   const filas = aprobados.map(m => ({
     user_id: S.currentUserId,
+    libro_id,
     fecha: m.fecha,
     centro: m.centro.trim(),
     tipo: m.tipo === 'F' ? 'F' : 'V',

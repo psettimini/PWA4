@@ -4,6 +4,7 @@
    cargado cada método y no volver a importar un período ya cubierto.
 ======================================== */
 import { S } from '../state.js';
+import { gastosDeLibro, libroCarga } from '../hogar.js';
 import { escapeHtml, formatFechaCorta } from '../utils.js';
 
 export const REGISTRO_KEY = 'gastos_import_registro_v1';
@@ -35,7 +36,7 @@ export function registrarImportacion(movs) {
 /* Hasta qué fecha hay movimientos cargados de cada método. Se calcula sobre
    los datos reales y no sobre el registro: así sigue siendo cierto aunque se
    borre el caché o se cargue algo a mano. */
-export function coberturaPorMetodo(allData = S.allData) {
+export function coberturaPorMetodo(allData = gastosDeLibro(libroCarga())) {
   const mapa = new Map();
   for (const g of allData || []) {
     const k = g.Metodo || '—';
