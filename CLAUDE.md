@@ -8,7 +8,7 @@ PWA de **gestión de gastos personales** (es-AR). SPA en HTML/CSS/JS vanilla con
 
 - Repo: `psettimini/PWA4` (branch `main`)
 - App pública: GitHub Pages del repo
-- Versión actual: `3.1.1` (ver `js/state.js` → `APP_VERSION`)
+- Versión actual: `3.2.0` (ver `js/state.js` → `APP_VERSION`)
 
 ## Supabase
 
