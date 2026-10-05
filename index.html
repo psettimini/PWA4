@@ -71,6 +71,12 @@
       <button type="button" data-action="doResetPassword" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl transition-all"><i class="fas fa-envelope mr-2"></i>Enviar link de recuperación</button>
       <div class="text-center text-sm"><button type="button" data-action="showAuthMode" data-mode="login" class="text-blue-600 hover:underline">Volver a iniciar sesión</button></div>
     </div>
+
+    <div id="auth-form-nueva" class="space-y-4 hidden">
+      <div><label class="block text-sm font-medium mb-1" style="color:var(--text2)">Contraseña nueva</label><input type="password" id="auth-new-password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" class="w-full px-4 py-3 rounded-xl border-2 focus:border-blue-500 focus:outline-none" style="border-color:var(--input-border);background:var(--input-bg);color:var(--text)"></div>
+      <div><label class="block text-sm font-medium mb-1" style="color:var(--text2)">Repetila</label><input type="password" id="auth-new-password2" autocomplete="new-password" placeholder="La misma contraseña" class="w-full px-4 py-3 rounded-xl border-2 focus:border-blue-500 focus:outline-none" style="border-color:var(--input-border);background:var(--input-bg);color:var(--text)"></div>
+      <button type="button" data-action="doNuevaPassword" id="btn-nueva-password" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all"><i class="fas fa-key mr-2"></i>Guardar contraseña</button>
+    </div>
     <p id="auth-error" class="text-red-600 text-sm text-center mt-3 hidden"></p>
     <p id="auth-success" class="text-emerald-600 text-sm text-center mt-3 hidden"></p>
   </div>

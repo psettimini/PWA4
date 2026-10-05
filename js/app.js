@@ -2,10 +2,10 @@
    APP — Entry point, imports, registry, event delegation
    app.js — Se carga como <script type="module">
 ======================================== */
-import { $, S, sb, APP_VERSION, registry } from './state.js';
+import { $, S, sb, APP_VERSION, registry, RECUPERACION } from './state.js';
 import { setFechaHoy, updateCacheLabel, updatePendingBadge, updateNetworkStatus, restoreHistoryFilters, debounce } from './utils.js';
 import { initDarkMode, showTab, showUpdateBanner, dismissUpdateBanner, toast, toastWarn, toggleDarkMode } from './ui.js';
-import { showAuth, hideAuth, showAuthMode, doLogin, doRegister, doResetPassword, doLogout, loadUserProfile, applyRoleUI } from './auth.js';
+import { showAuth, hideAuth, showAuthMode, doLogin, doRegister, doResetPassword, doLogout, loadUserProfile, applyRoleUI, showNuevaPassword, doNuevaPassword } from './auth.js';
 import { cargarDatos, syncPendingQueue } from './data.js';
 import { guardarGasto, cancelarEdicion, borrarGasto, procesarPatrones, actualizarSugerencias, actualizarResumen, seleccionarPatron, seleccionarFijo, guardarFijoRapido, filtrarSugerencias, mostrarSugerenciasDebounced, navegarSugerencias, setMoneda, dismissFijoPendiente, evaluarImporteOnBlur, toggleDetectadosCarga, presupuestarDetectadoCarga, setModoCarga, actualizarCentrosCarga, editarIngreso, borrarIngreso } from './carga.js';
 import { renderHistorial, filtrarHistorial, filtrarHistorialDebounced, limpiarFiltros, exportarHistorialFiltrado, exportarCSV, editarGasto, cargarMasHistorial } from './historial.js';
@@ -48,7 +48,7 @@ registry.onTabChange = (tab) => {
 
 const clickActions = {
   /* Auth */
-  doLogin, doRegister, doResetPassword, doLogout,
+  doLogin, doRegister, doResetPassword, doLogout, doNuevaPassword,
   showAuthMode: (d) => showAuthMode(d.mode),
   /* Nav */
   showTab: (d) => showTab(d.tab),
@@ -183,6 +183,13 @@ document.addEventListener('DOMContentLoaded', () => {
   /* Auth listener */
   sb.auth.onAuthStateChange((event, session) => {
     console.log('[Auth]', event, session ? session.user.email : 'no session');
+    if (event === 'PASSWORD_RECOVERY') RECUPERACION.activa = true;
+    /* Vino del link de recuperación: tiene sesión, pero primero elige la contraseña nueva. */
+    if (session && RECUPERACION.activa) {
+      S.currentUserId = session.user.id;
+      showNuevaPassword();
+      return;
+    }
     if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
       if (S.currentUserId) {
         S.currentUserId = null; S.allData = []; S.dbCentros = []; S.dbMetodos = []; resetHogar();
@@ -221,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('auth-password')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
   $('auth-reg-password')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') doRegister(); });
   $('auth-reset-email')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') doResetPassword(); });
+  $('auth-new-password2')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') doNuevaPassword(); });
 
   /* Form dirty tracking */
   ['fecha','importe'].forEach(id => { $(id)?.addEventListener('input', () => { S.formDirty = true; }); });

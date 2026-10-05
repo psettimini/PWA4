@@ -4,6 +4,9 @@
 ======================================== */
 export const SUPABASE_URL = 'https://vljwkvtivthwwerqxisc.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsandrdnRpdnRod3dlcnF4aXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MzIzNDMsImV4cCI6MjA4OTAwODM0M30.ETQt8mP2qeqWOUWSgqQc4t1DGP908ufTP-vZhaXHKy4';
+/* Si se llega desde el link del mail de recuperación, hay que pedir la contraseña
+   nueva antes de entrar. Se lee antes de crear el cliente, que limpia el hash. */
+export const RECUPERACION = { activa: /type=recovery/.test(location.hash) };
 export const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export const S = {
@@ -36,7 +39,7 @@ export const S = {
 };
 
 export const HISTORIAL_PAGE_SIZE = 50;
-export const APP_VERSION = '3.2.0';
+export const APP_VERSION = '3.2.1';
 export const MONEDAS = ['ARS', 'USD'];
 export const MONEDA_DEFAULT = 'ARS';
 export const STORAGE_KEYS = {

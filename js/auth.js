@@ -2,7 +2,7 @@
    AUTH — Login, Registro, Reset, Logout, Perfil
    auth.js
 ======================================== */
-import { $, S, sb, STORAGE_KEYS, registry } from './state.js';
+import { $, S, sb, STORAGE_KEYS, registry, RECUPERACION } from './state.js';
 import { modalConfirm } from './ui.js';
 import { resetHogar } from './hogar.js';
 
@@ -61,8 +61,10 @@ export function showAuthMode(mode) {
   $('auth-form-login').classList.toggle('hidden', mode !== 'login');
   $('auth-form-register').classList.toggle('hidden', mode !== 'register');
   $('auth-form-reset').classList.toggle('hidden', mode !== 'reset');
+  $('auth-form-nueva').classList.toggle('hidden', mode !== 'nueva');
+  $('auth-captcha')?.classList.toggle('hidden', mode === 'nueva'); // cambiar la contraseña no pide captcha
   $('auth-error').classList.add('hidden'); $('auth-success').classList.add('hidden');
-  const subtitles = { login: 'Iniciá sesión para continuar', register: 'Creá tu cuenta gratis', reset: 'Recuperá tu contraseña' };
+  const subtitles = { login: 'Iniciá sesión para continuar', register: 'Creá tu cuenta gratis', reset: 'Recuperá tu contraseña', nueva: 'Elegí tu contraseña nueva' };
   $('auth-subtitle').textContent = subtitles[mode] || '';
 }
 
@@ -105,9 +107,42 @@ export async function doResetPassword() {
   const email = $('auth-reset-email').value.trim();
   if (!email) { showAuthError('Ingresá tu email'); return; }
   const token = takeCaptcha(); if (!token) return;
-  try { const { error } = await sb.auth.resetPasswordForEmail(email, { captchaToken: token }); if (error) throw error; showAuthSuccess('¡Listo! Revisá tu email para restablecer tu contraseña.'); }
+  /* El link del mail vuelve a esta misma página (no a la Site URL del proyecto, que comparte
+     el CRM). La URL tiene que estar en Auth → URL Configuration → Redirect URLs. */
+  const redirectTo = location.origin + location.pathname;
+  try { const { error } = await sb.auth.resetPasswordForEmail(email, { captchaToken: token, redirectTo }); if (error) throw error; showAuthSuccess('¡Listo! Revisá tu email para restablecer tu contraseña.'); }
   catch (e) { showAuthError(isCaptchaError(e) ? CAPTCHA_ERROR : e.message); }
   finally { resetCaptcha(); }
+}
+
+/* ── Contraseña nueva (después del link de recuperación) ──
+   El link ya abrió sesión; falta fijar la contraseña antes de dejar entrar a la app. */
+export function showNuevaPassword() {
+  $('auth-overlay').classList.remove('hidden');
+  showAuthMode('nueva');
+  setTimeout(() => $('auth-new-password')?.focus(), 50);
+}
+
+export async function doNuevaPassword() {
+  const p1 = $('auth-new-password').value, p2 = $('auth-new-password2').value;
+  if (p1.length < 6) { showAuthError('La contraseña debe tener al menos 6 caracteres'); return; }
+  if (p1 !== p2) { showAuthError('Las contraseñas no coinciden'); return; }
+  const btn = $('btn-nueva-password');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>Guardando...';
+  try {
+    const { error } = await sb.auth.updateUser({ password: p1 });
+    if (error) throw error;
+    RECUPERACION.activa = false;
+    $('auth-new-password').value = ''; $('auth-new-password2').value = '';
+    history.replaceState(null, '', location.pathname);
+    hideAuth();
+    await loadUserProfile();
+    applyRoleUI();
+    registry.cargarDatos?.();
+  } catch (e) {
+    const msgs = { 'New password should be different from the old password.': 'La contraseña nueva tiene que ser distinta de la anterior' };
+    showAuthError(msgs[e.message] || e.message);
+  } finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key mr-2"></i>Guardar contraseña'; }
 }
 
 export async function doLogout() {
