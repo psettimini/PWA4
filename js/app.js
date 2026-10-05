@@ -184,6 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
   sb.auth.onAuthStateChange((event, session) => {
     console.log('[Auth]', event, session ? session.user.email : 'no session');
     if (event === 'PASSWORD_RECOVERY') RECUPERACION.activa = true;
+    if (session && $('config-user-email')) $('config-user-email').textContent = session.user.email || '';
     /* Vino del link de recuperación: tiene sesión, pero primero elige la contraseña nueva. */
     if (session && RECUPERACION.activa) {
       S.currentUserId = session.user.id;
@@ -201,7 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (session) {
       S.currentUserId = session.user.id;
       hideAuth();
-      if ($('config-user-email')) $('config-user-email').textContent = session.user.email || '';
       if (S.allData.length === 0) setTimeout(async () => {
         await loadUserProfile();
         applyRoleUI();
