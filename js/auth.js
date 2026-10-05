@@ -11,11 +11,14 @@ import { resetHogar } from './hogar.js';
    proyecto. Un solo widget abajo de los tres formularios; cada token sirve una vez,
    así que se pide uno nuevo después de cada intento. */
 const TURNSTILE_SITEKEY = '0x4AAAAAAFLIXghjiBqpw4gR';
+/* Tiene que coincidir con Supabase → Authentication → Attack Protection. Si Supabase
+   no lo exige y el widget se muestra igual, bloquea el login sin motivo. */
+const CAPTCHA_ACTIVO = false;
 let captchaToken = '';
 let captchaWidget = null;
 
 function renderCaptcha() {
-  if (captchaWidget !== null) return;
+  if (!CAPTCHA_ACTIVO || captchaWidget !== null) return;
   const draw = () => {
     if (captchaWidget !== null || !window.turnstile) return;
     const box = document.createElement('div');
@@ -47,9 +50,13 @@ function resetCaptcha() {
 
 /** Token para Supabase, o null (con el error ya mostrado) si todavía no se verificó. */
 function takeCaptcha() {
+  if (!CAPTCHA_ACTIVO) return true;
   if (!captchaToken) { showAuthError('Esperá a que termine la verificación de seguridad'); return null; }
   return captchaToken;
 }
+
+/* Opciones de captcha para Supabase: vacías si está apagado. */
+const conCaptcha = (token) => CAPTCHA_ACTIVO ? { captchaToken: token } : {};
 
 const CAPTCHA_ERROR = 'No se pudo verificar que seas una persona. Probá de nuevo.';
 const isCaptchaError = (e) => /captcha/i.test(e?.message || '');
@@ -78,7 +85,7 @@ export async function doLogin() {
   const btn = $('btn-login');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>Ingresando...';
   try {
-    const { error } = await sb.auth.signInWithPassword({ email, password, options: { captchaToken: token } });
+    const { error } = await sb.auth.signInWithPassword({ email, password, options: conCaptcha(token) });
     if (error) throw error;
   } catch (e) {
     const msgs = { 'Invalid login credentials': 'Email o contraseña incorrectos', 'Email not confirmed': 'Revisá tu email para confirmar la cuenta' };
@@ -94,7 +101,7 @@ export async function doRegister() {
   const btn = $('btn-register');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>Creando cuenta...';
   try {
-    const { error } = await sb.auth.signUp({ email, password, options: { captchaToken: token } });
+    const { error } = await sb.auth.signUp({ email, password, options: conCaptcha(token) });
     if (error) throw error;
     showAuthMode('login'); showAuthSuccess('¡Cuenta creada! Revisá tu email para confirmar.');
   } catch (e) {
@@ -110,7 +117,7 @@ export async function doResetPassword() {
   /* El link del mail vuelve a esta misma página (no a la Site URL del proyecto, que comparte
      el CRM). La URL tiene que estar en Auth → URL Configuration → Redirect URLs. */
   const redirectTo = location.origin + location.pathname;
-  try { const { error } = await sb.auth.resetPasswordForEmail(email, { captchaToken: token, redirectTo }); if (error) throw error; showAuthSuccess('¡Listo! Revisá tu email para restablecer tu contraseña.'); }
+  try { const { error } = await sb.auth.resetPasswordForEmail(email, { ...conCaptcha(token), redirectTo }); if (error) throw error; showAuthSuccess('¡Listo! Revisá tu email para restablecer tu contraseña.'); }
   catch (e) { showAuthError(isCaptchaError(e) ? CAPTCHA_ERROR : e.message); }
   finally { resetCaptcha(); }
 }
