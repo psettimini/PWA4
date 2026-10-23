@@ -167,7 +167,7 @@ export function renderSelectorLibro() {
   const n = porAprobar().length;
   cont.innerHTML = `<div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
     ${S.libros.map(l => chip(l.id, l.nombre, l.tipo === 'negocio' ? 'fa-briefcase' : 'fa-book')).join('')}
-    ${chip(HOGAR, 'Hogar', 'fa-house')}
+    ${chip(HOGAR, 'Total', 'fa-house')}
     ${n ? `<button type="button" data-action="irABandeja" class="libro-chip libro-chip-alerta"><i class="fas fa-inbox mr-1.5"></i>${n} por aprobar</button>` : ''}
   </div>`;
 }

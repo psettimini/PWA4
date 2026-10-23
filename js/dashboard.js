@@ -41,7 +41,7 @@ export function renderFlujo() {
   kpi('flujo-egresos', egr.ARS, egr.USD);
   kpi('flujo-saldo', ing.ARS - egr.ARS, ing.USD - egr.USD);
   $('flujo-saldo-card').classList.toggle('flujo-negativo', ing.ARS - egr.ARS < 0);
-  $('flujo-titulo').textContent = S.libroActivo === HOGAR ? 'Hogar' : (libroPorId(S.libroActivo)?.nombre || '');
+  $('flujo-titulo').textContent = S.libroActivo === HOGAR ? 'Total' : (libroPorId(S.libroActivo)?.nombre || '');
 
   const lista = S.ingresos.filter(i => i.Fecha && i.Fecha.startsWith(elegido)).sort((a, b) => (b.Fecha || '').localeCompare(a.Fecha || ''));
   $('flujo-lista').innerHTML = lista.length ? lista.map(i => `<div class="bandeja-fila">
