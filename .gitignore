@@ -6,5 +6,9 @@
 # Anclado a la raíz: js/importar/ es código y sí va al repo.
 /importar/
 
+# Boletas de expensas e informes armados a partir de ellas (datos personales).
+# Anclado a la raíz: js/expensas/ es código y sí va al repo.
+/expensas/
+
 # permisos locales de Claude Code: son de cada máquina
 .claude/settings.local.json

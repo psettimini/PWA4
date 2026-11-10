@@ -114,6 +114,29 @@ Presupuesto de gastos fijos: una fila por ítem recurrente. Es la fuente de verd
 - Un ítem no mensual **sin `mes_ancla`** cuenta para el devengado pero nunca se avisa como pendiente, porque no se puede saber cuándo vence. La UI lo señala.
 - No hay FK contra `gastos`: la relación es por nombre, igual que con `centros` y `metodos_pago`.
 
+### `expensas`
+
+Boletas de expensas del consorcio: una fila por unidad funcional (UF) y período. Las carga la pestaña Expensas a partir del PDF. Migración: `supabase/migrations/20261109_expensas.sql`.
+
+| Columna | Tipo | Nullable | Descripción |
+|---------|------|----------|-------------|
+| `id` | `uuid` | No | PK, auto-generado |
+| `user_id` | `uuid` | No | Quien subió la boleta. FK → `auth.users.id` (ON DELETE CASCADE). Default `auth.uid()` |
+| `uf` | `text` | No | Número de unidad funcional (`"152"`, `"153"`) |
+| `periodo` | `date` | No | Primer día del mes liquidado (`PERIODO LIQ`). CHECK día = 1 |
+| `vencimiento` | `date` | Sí | Fecha del 1° vencimiento |
+| `saldo_anterior` | `numeric` | No | Default `0`. Ya incluido en `total` |
+| `total` | `numeric` | No | Total del 1° vencimiento |
+| `conceptos` | `jsonb` | No | Array `[{ concepto, motivo, importe, lectura: { ant, act, consumo } \| null }]`, tal como vienen en la boleta. CHECK es array |
+| `archivo` | `text` | Sí | Nombre del PDF subido |
+| `created_at` / `updated_at` | `timestamptz` | No | `updated_at` lo pone la app al subir |
+
+**Constraints e índices:** `UNIQUE (user_id, uf, periodo)` — subir de nuevo la misma boleta la reemplaza. Índice `(periodo)`.
+
+**RLS:** SELECT para quien la subió y para los miembros de su hogar; INSERT/UPDATE/DELETE solo quien la subió (`auth.uid() = user_id`). GRANT `select, insert, update, delete` a `authenticated` y `all` a `service_role`.
+
+**Nota:** no se guardan categorías. La app clasifica los conceptos al mostrarlos (ordinarias, extraordinarias, luz, agua, otros); ver [funcionalidades](funcionalidades.md#6b-expensas-expensasjs-expensasparserjs).
+
 ---
 
 ## Función RPC: `bulk_rename`

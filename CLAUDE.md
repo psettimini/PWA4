@@ -8,7 +8,7 @@ PWA de **gestión de gastos personales** (es-AR). SPA en HTML/CSS/JS vanilla con
 
 - Repo: `psettimini/PWA4` (branch `main`)
 - App pública: GitHub Pages del repo
-- Versión actual: `3.2.4` (ver `js/state.js` → `APP_VERSION`)
+- Versión actual: `3.3.0` (ver `js/state.js` → `APP_VERSION`)
 
 ## Supabase
 
@@ -27,6 +27,7 @@ PWA de **gestión de gastos personales** (es-AR). SPA en HTML/CSS/JS vanilla con
 | `presupuesto_fijos` | — | Presupuesto de gastos fijos. Una fila por ítem recurrente (`concepto`+`centro`+`moneda` únicos). `importe` es **por ocurrencia**; `frecuencia` (`mensual`…`anual`) define la mensualización; `mes_ancla` (1-12) ubica los no mensuales. Campos: `metodo`, `dia_vencimiento`, `cuotas_restantes`, `activo`, `notas`. |
 | `hogares` / `hogar_miembros` / `libros` | 1 / 2 / 3 | Hogar compartido Settimini. Miembros (alias + color del pill): Pablo (cuenta `blitos@me.com`) y Raquel. Libros: Pablo, Raquel, Consultorio (negocio, titular Raquel). Solo lectura desde la app; se administran por SQL. |
 | `ingresos` | — | Igual que `gastos` pero sin `tipo`; siempre con `libro_id`. |
+| `expensas` | — | Boletas del consorcio: una fila por `uf` + `periodo` (date, día 1) con `total`, `vencimiento`, `saldo_anterior` y `conceptos` (jsonb, con lecturas de luz/agua). Las sube la pestaña Expensas desde el PDF; las ve todo el hogar y las edita quien las subió. Migración: [supabase/migrations/20261109_expensas.sql](supabase/migrations/20261109_expensas.sql). |
 
 **Modelo hogar (v3.0.0):** `gastos`/`ingresos` tienen `libro_id` (de quién es), `user_id` (quién cargó → pill), `estado` (`aprobado`/`pendiente`/`rechazado`) y, para pases, `pase_libro_id` (en el gasto origen) / `pase_origen_id` (en el destino). Los miembros ven todo el hogar; cada uno escribe libre solo en sus libros y en los ajenos solo como `pendiente`; aprueba únicamente el titular. Usuarios sin hogar (Ricardo, Marianne…) siguen con `libro_id` NULL y el modelo viejo. Frontend: [js/hogar.js](js/hogar.js). Migración: [supabase/migrations/20261001_hogar_libros_ingresos.sql](supabase/migrations/20261001_hogar_libros_ingresos.sql).
 
@@ -51,6 +52,8 @@ js/
   comparar.js           Comparación mes a mes (acepta el presupuesto como lado)
   presupuesto.js        Presupuesto de fijos: detección, mensualización, pendientes
   hogar.js              Libros, pills de quién cargó, aprobación, pases
+  expensas.js           Boletas del consorcio: subida, total por mes, expensa, luz, agua
+  expensas/parser.js    Lectura de la boleta (función pura, valida contra el total)
   abm.js                ABM centros y métodos
   app.js                Init, event listeners globales
 docs/                   Documentación técnica detallada

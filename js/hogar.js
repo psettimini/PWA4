@@ -160,6 +160,8 @@ export function pillsMovimiento(m) {
 /* ── Selector de libro ── */
 export function renderSelectorLibro() {
   document.body.classList.toggle('con-hogar', tieneHogar());
+  /* Expensas es solo del hogar: quien no tiene hogar no la ve ni queda parado en ella. */
+  if (!tieneHogar() && S.currentTab === 'expensas') registry.showTab?.('historial');
   const cont = $('libro-selector'); if (!cont) return;
   cont.classList.toggle('hidden', !tieneHogar());
   if (!tieneHogar()) return;

@@ -36,10 +36,11 @@ export const S = {
   dashboardMoneda: 'ARS',
   compararMoneda: 'ARS',
   presupuesto: [],
+  expensas: [],
 };
 
 export const HISTORIAL_PAGE_SIZE = 50;
-export const APP_VERSION = '3.2.4';
+export const APP_VERSION = '3.3.0';
 export const MONEDAS = ['ARS', 'USD'];
 export const MONEDA_DEFAULT = 'ARS';
 export const STORAGE_KEYS = {
@@ -53,7 +54,8 @@ export const STORAGE_KEYS = {
   historyFilters: 'gastos_historial_filters_v2',
   dismissals: 'gastos_fijos_dismissed_v1',
   importDraft: 'gastos_import_draft_v1',
-  presupuestoCache: 'gastos_presupuesto_cache_v1'
+  presupuestoCache: 'gastos_presupuesto_cache_v1',
+  expensasCache: 'gastos_expensas_cache_v1'
 };
 
 export const $ = id => document.getElementById(id);

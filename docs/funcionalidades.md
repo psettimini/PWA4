@@ -6,7 +6,7 @@
 
 ## Secciones de la Aplicación
 
-La app tiene 6 tabs/secciones principales:
+La app tiene 7 tabs/secciones principales:
 
 | Tab | Sección | Módulo JS | Descripción |
 |-----|---------|-----------|-------------|
@@ -15,6 +15,7 @@ La app tiene 6 tabs/secciones principales:
 | Dashboard | `section-dashboard` | `dashboard.js` | KPIs y gráficos analíticos |
 | Comparar | `section-comparar` | `comparar.js` | Comparación mes a mes o contra el presupuesto |
 | Presupuesto | `section-presupuesto` | `presupuesto.js` | Presupuesto de gastos fijos y costo fijo mensual |
+| Expensas | `section-expensas` | `expensas.js` | Boletas del consorcio: total por mes, expensa, luz y agua |
 | Config ⚙ | `section-config` | `abm.js` | Configuración, ABM de catálogos |
 
 ---
@@ -299,6 +300,43 @@ La ventana es de 24 y no 12 meses porque un gasto anual necesita dos apariciones
 ### Gestión
 
 Lista editable inline: importe, frecuencia y mes ancla. El toggle da de baja sin borrar historia (`activo = false`) y el botón de alta manual permite cargar un fijo que el historial todavía no conoce.
+
+## 6b. Expensas (`expensas.js`, `expensas/parser.js`)
+
+Seguimiento de las boletas de expensas del consorcio (Kentucky Club de Campo, una boleta por UF y mes). Las boletas se suben como PDF desde la pestaña y quedan en la tabla `expensas`.
+
+La pestaña es solo para usuarios con hogar (clase `hogar-only`); a quien no tiene hogar no le aparece, y si la tenía guardada como última pestaña vuelve a Historial.
+
+### Subida de boletas (`subirBoletas()`)
+
+1. Se aceptan varios PDF a la vez. Cada uno se lee con `leerPdf()` del importador (pdf.js, mismas filas que usan los parsers de resúmenes).
+2. `parsearBoleta()` saca la UF, el período (`PERIODO LIQ`), el vencimiento, el saldo anterior, el total y una fila por concepto con su motivo y, para luz y agua, la lectura del medidor (tres enteros `ant`, `act`, `consumo` con `act − ant = consumo`). Entiende los dos formatos de boleta: hasta nov-2025 (`TOTAL A PAGAR`) y desde dic-2025 (`1° VENCIMIENTO`).
+3. **Validación:** la boleta solo se guarda si los conceptos más el saldo anterior dan exactamente el total del 1° vencimiento. Si no, se informa la diferencia y no se guarda nada.
+4. `upsert` por `(user_id, uf, periodo)`: subir de nuevo la misma boleta la reemplaza; si es idéntica se informa «ya estaba cargada» y no se escribe.
+
+El resultado se muestra como resumen (guardadas · reemplazadas · ya estaban · con error), con los errores a la vista y el detalle por archivo desplegable.
+
+### Clasificación de conceptos (`categoria()`)
+
+| Categoría | Conceptos |
+|-----------|-----------|
+| Ordinarias | `EXPENSAS`, `EXPENSAS ORDINARIAS` y los rubros de espacios comunes (`AGUA ESPACIOS COMUNES`, `ENERGIA ELECTRICA ESP. COMUNES`) y `REINTEGROS VARIOS`, que hasta nov-2025 venían aparte |
+| Extraordinarias | `EXPENSAS EXTRAORDINARIA` |
+| Luz / Agua | `CONSUMO KW` / `CONSUMO AGUA`, con su lectura |
+| Otros | Todo lo demás (residuos, deportes, multas, generador, vigilancia…) |
+
+La clasificación se hace al mostrar, no al guardar: un concepto nuevo cae en «otros» sin romper nada.
+
+### Vista
+
+- **KPIs:** total pagado (todas las boletas), promedio por mes, último mes completo y mes más caro. Promedio, último mes y comparación usan solo **meses completos** (con la boleta de todas las UF): un mes a medio cargar daría una baja falsa. Los meses incompletos se marcan en la tabla.
+- **Cuánto pago por mes:** barras apiladas por UF + tabla con el total y la variación mensual.
+- **Expensa de la UF:** ordinarias + extraordinarias de la UF elegida (selector si hay más de una UF; por defecto la que tiene medidor).
+- **Energía:** kWh por mes y $/kWh (importe ÷ kWh) en dos gráficos separados, más la tabla de lecturas.
+- **Agua:** tabla de lecturas, m³ e importe por m³ (se factura cada dos meses).
+- **Boletas cargadas:** lista desplegable con borrado (solo las propias).
+
+Los importes se redondean al peso (el resto de la app trunca) para que coincidan con la boleta. Si dos miembros del hogar suben la misma boleta, se muestra la más nueva.
 
 ---
 

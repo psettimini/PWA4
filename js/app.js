@@ -15,6 +15,7 @@ import { initComparar, renderComparar } from './comparar.js';
 import { renderPresupuesto, presupDetectar, presupToggleDetectado, presupTodosDetectados, presupEditarDetectado,
          presupCancelarDeteccion, presupConfirmarDeteccion, presupEditarImporte, presupEditarFrecuencia,
          presupEditarAncla, presupToggleActivo, presupBorrar, presupNuevoToggle, presupGuardarNuevo } from './presupuesto.js';
+import { renderExpensas, subirBoletas, borrarBoleta, elegirUf, resetExpensas, cerrarResultadoSubida } from './expensas.js';
 import { renderABM, updateMetodoSelect, abmAdd, abmRename, abmMerge, abmRemoveCustom } from './abm.js';
 import { abrirImportador, cerrarImportador, aprobarImportacion, descartarTodo, setFiltro, descartarFila, restaurarFila, volverAArchivo, cancelarLectura, importarTexto, initImportador } from './importar/index.js';
 
@@ -39,6 +40,7 @@ registry.onTabChange = (tab) => {
   if (tab === 'dashboard') renderDashboard();
   if (tab === 'comparar') initComparar();
   if (tab === 'presupuesto') renderPresupuesto();
+  if (tab === 'expensas') renderExpensas();
   if (tab === 'config') renderABM();
 };
 
@@ -112,6 +114,9 @@ const clickActions = {
   presupBorrar: (d) => presupBorrar(d.id, d.concepto),
   presupNuevoToggle: () => presupNuevoToggle(),
   presupGuardarNuevo: () => presupGuardarNuevo(),
+  /* Expensas */
+  borrarBoleta: (d) => borrarBoleta(d.id),
+  cerrarResultadoExpensas: () => cerrarResultadoSubida(),
   /* PWA */
   reload: () => location.reload(),
   dismissUpdateBanner: () => dismissUpdateBanner(),
@@ -144,6 +149,9 @@ const changeActions = {
   presupEditarImporte: (d, e, el) => presupEditarImporte(d.id, el.value),
   presupEditarFrecuencia: (d, e, el) => presupEditarFrecuencia(d.id, el.value),
   presupEditarAncla: (d, e, el) => presupEditarAncla(d.id, el.value),
+  /* Expensas */
+  subirBoletas: (d, e, el) => subirBoletas(el),
+  elegirUfExpensas: (d, e, el) => elegirUf(el.value),
 };
 
 document.addEventListener('change', (e) => {
@@ -193,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
       if (S.currentUserId) {
-        S.currentUserId = null; S.allData = []; S.dbCentros = []; S.dbMetodos = []; resetHogar();
+        S.currentUserId = null; S.allData = []; S.dbCentros = []; S.dbMetodos = []; resetHogar(); resetExpensas();
         toastWarn('Sesión finalizada');
         showAuth();
       }
